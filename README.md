@@ -61,9 +61,7 @@ breast-cancer-prediction/
 │   ├── 04_elastic_net_coefficients.csv
 │   ├── 04_shap_values_all_patients.csv
 │   └── ablation_results.csv
-└── paper/
-    ├── IEEE_JBHI.tex                    IEEE JBHI submission
-    └── Biorxiv.tex                      bioRxiv preprint
+
 ```
 
 ## Reproduction Instructions
