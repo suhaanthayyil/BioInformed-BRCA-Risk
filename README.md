@@ -6,8 +6,6 @@
 
 We present a biologically informed machine learning framework for predicting breast cancer progression risk using pathway-level gene expression features. Seven curated biological pathways (45 genes) are distilled into interpretable scores via mean z-score aggregation and combined with clinical variables. We train Elastic Net, Random Forest, and Gradient Boosting classifiers, complemented by Cox proportional hazards survival models and SHAP-based explainability analysis. The framework is trained on TCGA-BRCA (n=213) and externally validated on the independent SCAN-B/GSE96058 cohort (n=1,483), achieving a combined-feature AUC of 0.856 and Cox C-index of 0.827. An ablation study quantifies the contribution of pathway vs. clinical features, ssGSEA baseline comparison validates the scoring methodology, and cross-fold stability analysis (mean Spearman rho=0.820) confirms robust feature importance rankings.
 
-**Preprint:** bioRxiv [DOI pending]
-
 ## Repository Structure
 
 ```
