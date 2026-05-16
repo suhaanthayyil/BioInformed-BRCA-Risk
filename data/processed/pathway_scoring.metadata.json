@@ -1,0 +1,45 @@
+{
+  "generated_at": "2026-05-16T12:31:52-04:00",
+  "seed": 42,
+  "msigdb_version": "v2024.1.Hs",
+  "gene_set_counts": {
+    "hallmark": 50,
+    "reactome_curated": 244,
+    "kegg_medicus_curated": 50,
+    "mandatory_aggregation_sets": 29
+  },
+  "total_gene_sets_scored": 347,
+  "cohort_shapes": [
+    {
+      "cohort": "TCGA-BRCA",
+      "n_samples_pathway_scores": 213,
+      "n_pathway_sets": 345,
+      "n_samples_features": 213,
+      "n_features": 7
+    },
+    {
+      "cohort": "GSE96058",
+      "n_samples_pathway_scores": 3409,
+      "n_pathway_sets": 347,
+      "n_samples_features": 3409,
+      "n_features": 7
+    },
+    {
+      "cohort": "METABRIC",
+      "n_samples_pathway_scores": 1980,
+      "n_pathway_sets": 347,
+      "n_samples_features": 1980,
+      "n_features": 7
+    },
+    {
+      "cohort": "GSE20685",
+      "n_samples_pathway_scores": 327,
+      "n_pathway_sets": 344,
+      "n_samples_features": 327,
+      "n_features": 7
+    }
+  ],
+  "score_file": "data/processed/pathway_scores_all.parquet",
+  "feature_file": "data/processed/04_pathway_features.parquet",
+  "coverage_file": "results/reports/pathway_scoring_coverage.csv"
+}
