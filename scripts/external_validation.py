@@ -45,6 +45,7 @@ MODELS = REPO_ROOT / "models"
 LOGS = REPO_ROOT / "logs"
 SEED = 42
 BOOTSTRAP_ITER = 1000
+PAM50_COMPARATOR = "PAM50_ROR_official"
 
 
 def timestamp() -> str:
@@ -164,7 +165,11 @@ def metric_row(cohort: str, model: str, subgroup: str, sub: pd.DataFrame, risk_c
 
 
 def add_combined_model(predictions: pd.DataFrame, headline: str) -> pd.DataFrame:
-    pam = pd.read_parquet(PROCESSED / "baselines_pam50.parquet")[["sample_id", "score"]].rename(columns={"score": "pam50_score"})
+    pam_all = pd.read_parquet(PROCESSED / "baselines_pam50.parquet")
+    pam = (
+        pam_all[pam_all["baseline"].eq(PAM50_COMPARATOR) & pam_all["status"].eq("ok")][["sample_id", "score"]]
+        .rename(columns={"score": "pam50_score"})
+    )
     merged = predictions.merge(pam, on="sample_id", how="left")
     train = merged[merged["cohort"].eq("TCGA-BRCA") & merged[headline].notna() & merged["pam50_score"].notna()].copy()
     if len(train) < 20 or train["os_event"].sum() < 3:
@@ -215,7 +220,11 @@ def main() -> None:
         rows.append(cohort_pred)
 
     predictions = pd.concat(rows, ignore_index=True)
-    pam50 = pd.read_parquet(PROCESSED / "baselines_pam50.parquet")[["sample_id", "score"]].rename(columns={"score": "PAM50_ROR_surrogate"})
+    pam50_all = pd.read_parquet(PROCESSED / "baselines_pam50.parquet")
+    pam50 = (
+        pam50_all[pam50_all["baseline"].eq(PAM50_COMPARATOR) & pam50_all["status"].eq("ok")][["sample_id", "score"]]
+        .rename(columns={"score": PAM50_COMPARATOR})
+    )
     predictions = predictions.merge(pam50, on="sample_id", how="left")
     predictions = add_combined_model(predictions, headline)
     predictions.to_csv(RESULTS / "06_external_model_predictions.csv", index=False)
@@ -228,7 +237,7 @@ def main() -> None:
         "DeepSurv",
         "Stacked_Ensemble",
         "Combined_ML_PAM50",
-        "PAM50_ROR_surrogate",
+        PAM50_COMPARATOR,
     ]
     metric_rows = []
     for cohort, cohort_df in predictions.groupby("cohort", sort=True):
@@ -248,7 +257,7 @@ def main() -> None:
     metrics.to_csv(RESULTS / "Table_1_ml_external_validation.csv", index=False)
 
     h2h_rows = []
-    comparators = ["PAM50_ROR_surrogate", "Cox_PH", "Combined_ML_PAM50"]
+    comparators = [PAM50_COMPARATOR, "Cox_PH", "Combined_ML_PAM50"]
     for cohort, cohort_df in predictions.groupby("cohort", sort=True):
         tnbc_flag = cohort_df["tnbc_flag"].astype("boolean").fillna(False).astype(bool)
         for subgroup, mask in {
@@ -288,7 +297,7 @@ def main() -> None:
     h2h.to_csv(RESULTS / "Table_2_head_to_head.csv", index=False)
     primary_rows = h2h[
         h2h["subgroup"].eq("tnbc")
-        & h2h["comparator"].eq("PAM50_ROR_surrogate")
+        & h2h["comparator"].eq(PAM50_COMPARATOR)
         & h2h["delta_cindex"].notna()
         & h2h["ci_low"].notna()
         & h2h["ci_high"].notna()
@@ -299,7 +308,8 @@ def main() -> None:
     primary = {
         "generated_at": timestamp(),
         "headline_model": headline,
-        "primary_endpoint": "TNBC random-effects delta C-index vs PAM50_ROR_surrogate",
+        "primary_endpoint": f"TNBC random-effects delta C-index vs {PAM50_COMPARATOR}",
+        "pam50_comparator": PAM50_COMPARATOR,
         "threshold_delta": 0.03,
         "threshold_p": 0.05,
         "met": primary_met,
@@ -319,7 +329,7 @@ def main() -> None:
         "",
         metrics[
             (metrics["subgroup"].eq("overall"))
-            & (metrics["model"].isin([headline, "Cox_PH", "PAM50_ROR_surrogate"]))
+            & (metrics["model"].isin([headline, "Cox_PH", PAM50_COMPARATOR]))
         ][["cohort", "model", "n", "events", "harrell_c", "harrell_c_ci_low", "harrell_c_ci_high", "status"]].to_markdown(
             index=False, floatfmt=".3f"
         ),

@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
+import tempfile
 from datetime import datetime
 from pathlib import Path
 
@@ -15,7 +17,7 @@ import pandas as pd
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-from src.baselines import (
+from src.baselines import (  # noqa: E402
     ONCOTYPE_GENES,
     PROLIFERATION_GENES,
     commercial_formula_status,
@@ -26,7 +28,7 @@ from src.baselines import (
     percentile_0_100,
     samples_by_gene_from_tcga,
 )
-from src.survival import (
+from src.survival import (  # noqa: E402
     brier_score_at,
     bootstrap_c_index_ci,
     cox_hr_high_low,
@@ -73,7 +75,31 @@ def needed_genes() -> list[str]:
     genes = set(PROLIFERATION_GENES)
     for items in ONCOTYPE_GENES.values():
         genes.update(items)
+    try:
+        genes.update(load_pam50_map()["probe"].astype(str).str.upper())
+    except Exception as exc:
+        log(f"Could not load PAM50 map while building needed gene list: {exc}")
     return sorted(genes)
+
+
+def load_pam50_map() -> pd.DataFrame:
+    """Export the PAM50 centroid map from genefu."""
+
+    out = subprocess.check_output(
+        [
+            "Rscript",
+            "-e",
+            "suppressPackageStartupMessages(library(genefu)); data(pam50, package='genefu'); write.csv(pam50$centroids.map, row.names=FALSE)",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+    )
+    lines = [line for line in out.splitlines() if line and not line.startswith("Warning")]
+    from io import StringIO
+
+    df = pd.read_csv(StringIO("\n".join(lines)))
+    df["probe"] = df["probe"].astype(str).str.upper()
+    return df
 
 
 def load_baseline_expression(cohort: str, sample_ids: list[str]) -> pd.DataFrame:
@@ -104,6 +130,87 @@ def tumor_size_series(cohort: str, sample_ids: list[str]) -> pd.Series | None:
         clinical = pd.read_parquet(PROCESSED / "03_metabric_clinical.parquet")
         return clinical.set_index("sample_id").reindex(sample_ids)["TUMOR_SIZE"]
     return None
+
+
+def official_pam50_score(
+    cohort: str,
+    samples_by_gene: pd.DataFrame,
+    pam50_map: pd.DataFrame,
+) -> pd.DataFrame:
+    """Run official genefu PAM50 subtype and rorS scoring for one cohort."""
+
+    available = [g for g in pam50_map["probe"].tolist() if g in samples_by_gene.columns]
+    if len(available) < 40:
+        return pd.DataFrame(
+            [
+                {
+                    "cohort": cohort,
+                    "sample_id": pd.NA,
+                    "baseline": "PAM50_ROR_official",
+                    "score": np.nan,
+                    "score_0_100": np.nan,
+                    "method_label": "genefu_rorS",
+                    "status": "unavailable_low_gene_coverage",
+                    "note": f"Only {len(available)} PAM50 genes available; genefu official scoring not attempted.",
+                }
+            ]
+        )
+
+    expr = samples_by_gene[available].copy()
+    annot = pam50_map[pam50_map["probe"].isin(available)][["probe", "EntrezGene.ID"]].copy()
+    annot = annot.drop_duplicates("probe").set_index("probe").reindex(available).reset_index()
+
+    with tempfile.TemporaryDirectory(prefix="pam50_genefu_") as tmp:
+        tmpdir = Path(tmp)
+        expr_path = tmpdir / f"{cohort}_pam50_expr.csv"
+        annot_path = tmpdir / f"{cohort}_pam50_annot.csv"
+        out_path = tmpdir / f"{cohort}_pam50_out.csv"
+        expr.to_csv(expr_path)
+        annot.to_csv(annot_path, index=False)
+        cmd = ["Rscript", str(REPO_ROOT / "R" / "pam50.R"), str(expr_path), str(annot_path), str(out_path), "false"]
+        completed = subprocess.run(cmd, cwd=REPO_ROOT, text=True, capture_output=True, check=False)
+        if completed.returncode != 0:
+            note = completed.stderr.strip().splitlines()[-1] if completed.stderr.strip() else "unknown genefu error"
+            log(f"Official PAM50 failed for {cohort}: {note}")
+            return pd.DataFrame(
+                [
+                    {
+                        "cohort": cohort,
+                        "sample_id": pd.NA,
+                        "baseline": "PAM50_ROR_official",
+                        "score": np.nan,
+                        "score_0_100": np.nan,
+                        "method_label": "genefu_rorS",
+                        "status": "unavailable_genefu_error",
+                        "note": f"genefu scoring failed: {note}",
+                    }
+                ]
+            )
+        out = pd.read_csv(out_path)
+
+    out["sample_id"] = out["sample_id"].astype(str)
+    out["cohort"] = cohort
+    out["baseline"] = "PAM50_ROR_official"
+    out["score"] = pd.to_numeric(out["rorS_score"], errors="coerce")
+    out["score_0_100"] = out["score"].clip(0, 100)
+    out["method_label"] = "genefu_rorS"
+    out["status"] = "ok"
+    out["note"] = f"Official genefu::rorS and molecular.subtyping(pam50); {len(available)} PAM50 genes supplied."
+    return out[
+        [
+            "cohort",
+            "sample_id",
+            "baseline",
+            "score",
+            "score_0_100",
+            "method_label",
+            "status",
+            "note",
+            "pam50_subtype_genefu",
+            "rorS_risk",
+            "n_pam50_genes_input",
+        ]
+    ]
 
 
 def score_to_frame(result, cohort: str, samples: pd.DataFrame, score_0_100: pd.Series | None = None) -> pd.DataFrame:
@@ -139,11 +246,21 @@ def score_to_frame(result, cohort: str, samples: pd.DataFrame, score_0_100: pd.S
 
 def compute_scores(samples: pd.DataFrame) -> pd.DataFrame:
     all_scores: list[pd.DataFrame] = []
+    pam50_map = load_pam50_map()
     for cohort, cohort_samples in samples.groupby("cohort", sort=True):
         sample_ids = cohort_samples["sample_id"].astype(str).tolist()
         expr = load_baseline_expression(cohort, sample_ids)
         if not expr.empty:
             expr = expr.reindex(sample_ids)
+
+        if not expr.empty:
+            official = official_pam50_score(cohort, expr, pam50_map)
+            official = official.merge(
+                cohort_samples[["sample_id", "er_status", "tnbc_flag", "intrinsic_subtype_pam50_published"]],
+                on="sample_id",
+                how="left",
+            )
+            all_scores.append(official)
 
         subtype = cohort_samples.set_index("sample_id")["intrinsic_subtype_pam50_published"].reindex(sample_ids)
         pam50 = pam50_ror_surrogate(subtype, expr, tumor_size_series(cohort, sample_ids))
@@ -295,7 +412,7 @@ def main() -> None:
     samples, survival = load_harmonized_tables()
     scores = compute_scores(samples)
 
-    pam50 = scores[scores["baseline"].eq("PAM50_ROR_surrogate")]
+    pam50 = scores[scores["baseline"].str.startswith("PAM50_ROR", na=False)]
     oncotype = scores[scores["baseline"].eq("Oncotype_DX_21_gene_surrogate")]
     mammaprint = scores[scores["baseline"].eq("MammaPrint_gene70")]
     other = scores[scores["baseline"].isin(["EndoPredict", "Breast_Cancer_Index"])]
@@ -322,6 +439,7 @@ def main() -> None:
         },
         "metric_file": "results/Table_S1_clinical_baselines.csv",
         "surrogate_policy": "No proprietary assay score was fabricated; unavailable exact formulas are labeled unavailable.",
+        "pam50_policy": "Official genefu::rorS is preferred; subtype-risk surrogate retained only as fallback/comparison.",
     }
     (PROCESSED / "clinical_baselines.metadata.json").write_text(json.dumps(metadata, indent=2))
     write_report(scores, metrics)

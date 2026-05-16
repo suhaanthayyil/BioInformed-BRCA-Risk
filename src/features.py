@@ -7,7 +7,6 @@ constituent gene expression values.
 """
 
 import pandas as pd
-import numpy as np
 
 # Seven biological pathways and their constituent genes
 PATHWAY_DEFINITIONS = {

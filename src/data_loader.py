@@ -7,9 +7,9 @@ Handles loading of:
 - GSE96058 gene expression data (1.8GB)
 """
 
-import pandas as pd
-import numpy as np
 import os
+
+import pandas as pd
 
 
 def load_tcga_feature_matrix(path="data/processed/02_tcga_feature_matrix.csv"):

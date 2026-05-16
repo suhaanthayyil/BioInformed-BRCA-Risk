@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-16T12:27:32-04:00",
+  "generated_at": "2026-05-16T13:11:08-04:00",
   "bootstrap_iterations": 1000,
   "seed": 42,
   "score_files": {
@@ -9,5 +9,6 @@
     "other": "data/processed/baselines_other.parquet"
   },
   "metric_file": "results/Table_S1_clinical_baselines.csv",
-  "surrogate_policy": "No proprietary assay score was fabricated; unavailable exact formulas are labeled unavailable."
+  "surrogate_policy": "No proprietary assay score was fabricated; unavailable exact formulas are labeled unavailable.",
+  "pam50_policy": "Official genefu::rorS is preferred; subtype-risk surrogate retained only as fallback/comparison."
 }
