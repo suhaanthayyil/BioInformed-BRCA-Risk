@@ -1,0 +1,24 @@
+{
+  "generated_at": "2026-05-16T12:38:29-04:00",
+  "seed": 42,
+  "n_splits": 5,
+  "training_cohort": "TCGA-BRCA",
+  "n_training_samples": 213,
+  "n_events": 132,
+  "features": [
+    "Pathway_Immune",
+    "Pathway_Proliferation",
+    "Pathway_DNA_Repair",
+    "Pathway_Metabolism",
+    "Pathway_Stromal_EMT",
+    "Pathway_Apoptosis_Stress",
+    "Pathway_Hormone",
+    "age_at_dx",
+    "stage_ordinal"
+  ],
+  "grid_mode": "compact_local",
+  "note": "Compact grid used for local tractability; XGBoost Cox disabled by default after repeated native process termination. Set ENABLE_XGBOOST_SURVIVAL=1 to retry that optional cross-check.",
+  "headline_model": "Gradient_Boosted_Survival",
+  "headline_cv_cindex": 0.6418257777973452,
+  "headline_delta_vs_cox": 0.041963998078774156
+}
