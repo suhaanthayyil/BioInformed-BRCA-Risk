@@ -1,19 +1,30 @@
 # Large data files
 *.csv.gz
+*.tar.gz
+*.gz
 data/raw/GSE96058_gene_expression*.csv
+data/raw/metabric/
+data/raw/gene_sets/
+data/quarantine/
 data/01_tcga_expression_normalized.csv
+data/processed/*.parquet
+data/processed/v2/*.parquet
+data/processed/v2/*.duckdb
+data/processed/*.duckdb
 
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.egg-info/
+*.so
 
 # Jupyter
 .ipynb_checkpoints/
 
 # OS
 .DS_Store
+Thumbs.db
 
 # LaTeX build artifacts
 *.aux
@@ -22,9 +33,28 @@ __pycache__/
 *.bbl
 *.blg
 *.synctex.gz
+*.fls
+*.fdb_latexmk
 paper/*.pdf
 
 # Virtual environments
 .venv/
 venv/
 env/
+
+# Logs (generated per session)
+logs/
+
+# Archives
+figures/archive/
+paper/archive/
+
+# R artifacts
+.Rhistory
+.RData
+.Rproj.user/
+
+# Models (large binary)
+models/*.pkl
+models/*.joblib
+models/*.pt

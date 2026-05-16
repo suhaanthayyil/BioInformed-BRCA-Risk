@@ -1,6 +1,6 @@
 # A Biologically Informed Explainable Machine Learning Framework for Breast Cancer Progression Risk Stratification From Tumor Gene Expression
 
-**Authors:** Suhaan Thayyil, Eshaan Nidee
+**Author:** Suhaan Thayyil
 
 ## Abstract
 
