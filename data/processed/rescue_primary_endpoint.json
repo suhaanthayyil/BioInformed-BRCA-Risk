@@ -1,0 +1,18 @@
+{
+  "label": "all_protocol_tnbc_cohorts",
+  "cohorts": [
+    "GSE96058",
+    "METABRIC",
+    "TCGA-BRCA"
+  ],
+  "met": false,
+  "meta_n_studies": 3,
+  "meta_effect": 0.12843252671604294,
+  "meta_se": 0.13244515374472632,
+  "meta_ci_low": -0.13115997462362067,
+  "meta_ci_high": 0.38802502805570654,
+  "meta_z": 0.9697034816659484,
+  "meta_p": 0.3321943145190458,
+  "meta_tau2": 0.047608032230735293,
+  "meta_i2": 0.9151665342786459
+}

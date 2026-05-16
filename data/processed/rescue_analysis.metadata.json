@@ -1,0 +1,76 @@
+{
+  "generated_at": "2026-05-16T15:48:56-04:00",
+  "seed": 42,
+  "selection_policy": "TCGA-only composite CV: 0.5 overall C-index + 0.5 TNBC C-index when TNBC folds evaluable",
+  "training_cohort": "TCGA-BRCA",
+  "n_training_samples": 213,
+  "n_training_events": 132,
+  "n_candidates": 391,
+  "headline_name": "Rescue_DeepSurv",
+  "headline_candidate": {
+    "candidate_id": "component7_interactions__DeepSurv__30028269",
+    "feature_set": "component7_interactions",
+    "model": "DeepSurv",
+    "n_features": 43,
+    "config": "{\"dropout\": 0.1, \"epochs\": 120, \"hidden_dims\": [64, 32], \"lr\": 0.001, \"patience\": 15, \"tnbc_weight\": 1, \"weight_decay\": 0.0001}",
+    "overall_cv_cindex": 0.6345928607106279,
+    "tnbc_cv_cindex": 0.6475081699346406,
+    "valid_tnbc_folds": 4,
+    "composite_cv_cindex": 0.6410505153226342,
+    "fold_cindexes": "[0.6416184971098265, 0.5898203592814372, 0.7130559540889526, 0.5787781350482315, 0.6496913580246914]",
+    "fold_tnbc_cindexes": "[0.5, NaN, 0.9444444444444444, 0.47058823529411764, 0.675]"
+  },
+  "primary_all_protocol_tnbc": {
+    "label": "all_protocol_tnbc_cohorts",
+    "cohorts": [
+      "GSE96058",
+      "METABRIC",
+      "TCGA-BRCA"
+    ],
+    "met": false,
+    "meta_n_studies": 3,
+    "meta_effect": 0.12843252671604294,
+    "meta_se": 0.13244515374472632,
+    "meta_ci_low": -0.13115997462362067,
+    "meta_ci_high": 0.38802502805570654,
+    "meta_z": 0.9697034816659484,
+    "meta_p": 0.3321943145190458,
+    "meta_tau2": 0.047608032230735293,
+    "meta_i2": 0.9151665342786459
+  },
+  "primary_external_only_tnbc": {
+    "label": "external_only_tnbc_cohorts",
+    "cohorts": [
+      "GSE96058",
+      "METABRIC"
+    ],
+    "met": false,
+    "meta_n_studies": 2,
+    "meta_effect": 0.002269059399316671,
+    "meta_se": 0.03298907839881568,
+    "meta_ci_low": -0.06238953426236205,
+    "meta_ci_high": 0.06692765306099539,
+    "meta_z": 0.068782139709551,
+    "meta_p": 0.9451630348611976,
+    "meta_tau2": 0.0,
+    "meta_i2": 0.0
+  },
+  "metabric_expression_audit": {
+    "current_processed_expression": "cBioPortal z-scores relative to diploid samples",
+    "raw_expression_file_present": true,
+    "zscore_expression_file_present": true,
+    "raw_shape_header_check": [
+      5,
+      1982
+    ],
+    "raw_first_rows_median": 6.886665131942995,
+    "raw_first_rows_sd": 1.3893470808212733,
+    "zscore_shape_header_check": [
+      5,
+      1982
+    ],
+    "zscore_first_rows_median": -0.1198,
+    "zscore_first_rows_sd": 0.9999999974186721
+  },
+  "status": "exploratory_rescue_not_met"
+}
