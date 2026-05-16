@@ -1,0 +1,20 @@
+{
+  "source_archive": "data/raw/brca_metabric.tar.gz",
+  "source_archive_sha256": "6d4683477d6b37a2d7edbedc0df610f67bc456f99e5e1bef6219f37b633a55f7",
+  "source_url_used": "https://datahub.assets.cbioportal.org/brca_metabric.tar.gz",
+  "legacy_protocol_url_status": "https://cbioportal-datahub.s3.amazonaws.com/brca_metabric.tar.gz returned HTTP 403 on 2026-05-16",
+  "clinical_patient_file": "data/raw/metabric/data_clinical_patient.txt",
+  "clinical_patient_sha256": "2a6bbadc6e4b2b07c0505559d438da959fc5c9aba55c7194abc394e2d6454995",
+  "clinical_sample_file": "data/raw/metabric/data_clinical_sample.txt",
+  "clinical_sample_sha256": "9a2291e065e2a0a5337b4eaeb09836e70b1bc3e1ed17714a013b53515697e6dc",
+  "expression_file": "data/raw/metabric/data_mrna_illumina_microarray_zscores_ref_diploid_samples.txt",
+  "expression_sha256": "f0de035fa03669eb0e4c415970345f617c3c1fdcee9f6a7d5b171ce580c8e139",
+  "mutation_file": "data/raw/metabric/data_mutations.txt",
+  "mutation_sha256": "e8b9386b8f0a8f71de1e24ef1180de965705ee7f8a86ff414298dde3f66a1a12",
+  "clinical_rows": 2509,
+  "clinical_columns": 48,
+  "expression_gene_rows": 20603,
+  "expression_sample_columns": 1980,
+  "tnbc_first_pass_n": 320,
+  "expression_orientation": "genes rows, samples columns, cBioPortal z-scores relative to diploid samples"
+}

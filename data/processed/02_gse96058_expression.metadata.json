@@ -1,0 +1,9 @@
+{
+  "source_file": "data/raw/GSE96058_gene_expression_3273_samples_and_136_replicates_transformed.csv.gz",
+  "source_sha256": "3c717baf7960e1f1477a72744a399a42fabba113c9e7ecb3d55997574d7e9732",
+  "rows_genes": 30865,
+  "columns_total": 3410,
+  "sample_columns": 3409,
+  "orientation": "genes rows, samples columns",
+  "output_file": "data/processed/02_gse96058_expression.parquet"
+}
