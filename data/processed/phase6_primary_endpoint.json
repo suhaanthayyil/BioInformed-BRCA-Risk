@@ -1,0 +1,22 @@
+{
+  "generated_at": "2026-05-16T12:45:44-04:00",
+  "headline_model": "Gradient_Boosted_Survival",
+  "primary_endpoint": "TNBC random-effects delta C-index vs PAM50_ROR_surrogate",
+  "threshold_delta": 0.03,
+  "threshold_p": 0.05,
+  "met": false,
+  "meta_n_studies": 3,
+  "meta_effect": -0.0004811947162817862,
+  "meta_se": 0.05368518847163709,
+  "meta_ci_low": -0.10570416412069049,
+  "meta_ci_high": 0.10474177468812691,
+  "meta_z": -0.008963267709044377,
+  "meta_p": 0.9928484428402895,
+  "meta_tau2": 0.004418611280089413,
+  "meta_i2": 0.48952097275437645,
+  "cohorts_in_meta": [
+    "GSE96058",
+    "METABRIC",
+    "TCGA-BRCA"
+  ]
+}
