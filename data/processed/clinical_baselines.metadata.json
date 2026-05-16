@@ -1,0 +1,13 @@
+{
+  "generated_at": "2026-05-16T12:27:32-04:00",
+  "bootstrap_iterations": 1000,
+  "seed": 42,
+  "score_files": {
+    "pam50": "data/processed/baselines_pam50.parquet",
+    "oncotype": "data/processed/baselines_oncotype.parquet",
+    "mammaprint": "data/processed/baselines_mammaprint.parquet",
+    "other": "data/processed/baselines_other.parquet"
+  },
+  "metric_file": "results/Table_S1_clinical_baselines.csv",
+  "surrogate_policy": "No proprietary assay score was fabricated; unavailable exact formulas are labeled unavailable."
+}
