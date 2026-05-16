@@ -31,6 +31,15 @@ Last updated: 2026-05-16T11:16:00-04:00
 
 ## Pending Data
 
-- MSigDB gene sets are intentionally not downloaded until explicit license approval at STOP GATE 1.
-- Optional fourth cohort acquisition (GSE20685 or similar) has not started because the protocol stops at the MSigDB license gate first.
+- MSigDB v2024.1.Hs approval was received on 2026-05-16. The Broad public release directory is `2024.1.Hs/` while filenames carry `v2024.1.Hs`.
+- Downloaded and validated GMT files: Hallmark, Reactome, KEGG MEDICUS, PID, and GO BP. Provenance is recorded in `data/processed/msigdb_v2024_1_Hs.metadata.json`.
 
+## GSE20685
+
+- Source: GEO series matrix `GSE20685_series_matrix.txt.gz`, platform GPL570.
+- Series matrix SHA256: `e818a4d5834e20bbcf01de515caf856c394abb36a02b9cccc95be05c22d0a279`.
+- GPL570 annotation SHA256: `d7cd44352127b1e34f3a720ebea86093ef255a38f1612a85a2962b71bde8f394`.
+- Parsed outputs: `data/processed/04_gse20685_expression.parquet` and `data/processed/04_gse20685_clinical.parquet`.
+- Parsed expression shape: 22,189 gene-symbol rows by 327 sample columns after GPL570 probe-to-symbol mapping and duplicate-symbol averaging.
+- Parsed clinical shape: 327 rows with OS event and follow-up duration from GEO sample characteristics.
+- Limitation: ER/PR/HER2 receptor status was not available in the parsed series metadata, so GSE20685 can support overall survival validation but cannot contribute to the TNBC primary endpoint unless additional metadata is found.

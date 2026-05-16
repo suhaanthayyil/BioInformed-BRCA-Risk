@@ -1,0 +1,15 @@
+{
+  "source": "GEO GSE20685 series matrix",
+  "source_file": "data/raw/GSE20685_series_matrix.txt.gz",
+  "source_sha256": "e818a4d5834e20bbcf01de515caf856c394abb36a02b9cccc95be05c22d0a279",
+  "platform_annotation_file": "data/raw/GPL570.annot.gz",
+  "platform_annotation_sha256": "d7cd44352127b1e34f3a720ebea86093ef255a38f1612a85a2962b71bde8f394",
+  "expression_probe_rows_original": 54627,
+  "expression_probe_rows_without_gene_symbol": 9509,
+  "expression_gene_rows": 22189,
+  "sample_columns": 327,
+  "clinical_rows": 327,
+  "tnbc_available": false,
+  "tnbc_note": "ER/PR/HER2 receptor status not available in parsed GEO series metadata; cohort can support overall survival but not TNBC primary endpoint unless additional metadata is found.",
+  "raw_cel_tar_available_but_not_downloaded": "GSE20685_RAW.tar is 2.6G; series matrix was sufficient for processed expression and clinical survival metadata."
+}

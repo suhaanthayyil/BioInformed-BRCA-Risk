@@ -1,0 +1,41 @@
+{
+  "version": "v2024.1.Hs",
+  "download_directory": "https://data.broadinstitute.org/gsea-msigdb/msigdb/release/2024.1.Hs/",
+  "files": [
+    {
+      "file": "data/raw/gene_sets/c2.cp.kegg_medicus.v2024.1.Hs.symbols.gmt",
+      "sha256": "0b4e0d7c05e8fb12f9ffcc42bc69e54a590c6d68cabb4062f17bdc37ac57674b",
+      "gene_sets": 658,
+      "first_set": "KEGG_MEDICUS_ENV_FACTOR_ARSENIC_TO_ELECTRON_TRANSFER_IN_COMPLEX_IV",
+      "first_set_gene_count": 21
+    },
+    {
+      "file": "data/raw/gene_sets/c2.cp.pid.v2024.1.Hs.symbols.gmt",
+      "sha256": "208772254b8c13a6ee1c4a864cfa14b56657f279ec5b36e8999db87b951155e5",
+      "gene_sets": 196,
+      "first_set": "PID_A6B1_A6B4_INTEGRIN_PATHWAY",
+      "first_set_gene_count": 46
+    },
+    {
+      "file": "data/raw/gene_sets/c2.cp.reactome.v2024.1.Hs.symbols.gmt",
+      "sha256": "9ea1b5e656597daf423e41c5ebcaa9892bfedf3292fff768605d7b0d5e5e9703",
+      "gene_sets": 1736,
+      "first_set": "REACTOME_2_LTR_CIRCLE_FORMATION",
+      "first_set_gene_count": 7
+    },
+    {
+      "file": "data/raw/gene_sets/c5.go.bp.v2024.1.Hs.symbols.gmt",
+      "sha256": "71df041c352cc810c11847db328bb94925c5448a009f310d224f2e8baa60b792",
+      "gene_sets": 7608,
+      "first_set": "GOBP_10_FORMYLTETRAHYDROFOLATE_METABOLIC_PROCESS",
+      "first_set_gene_count": 5
+    },
+    {
+      "file": "data/raw/gene_sets/h.all.v2024.1.Hs.symbols.gmt",
+      "sha256": "ee2463540042078bfa3f67828e1e223bb354446d9fbb4d22845866835ba5c772",
+      "gene_sets": 50,
+      "first_set": "HALLMARK_ADIPOGENESIS",
+      "first_set_gene_count": 200
+    }
+  ]
+}
