@@ -1,0 +1,40 @@
+{
+  "db_path": "/Users/suhaan/Documents/Coding/RP/breast-cancer-prediction/data/processed/unified_cohorts.duckdb",
+  "samples_rows": 4532,
+  "survival_rows": 4532,
+  "qc_rows": 4532,
+  "cohort_counts": [
+    {
+      "cohort": "GSE20685",
+      "n_samples": 327,
+      "n_retained": 327.0,
+      "n_tnbc": 0.0,
+      "n_os_events": 83.0,
+      "median_os_days": 2958.525
+    },
+    {
+      "cohort": "GSE96058",
+      "n_samples": 1483,
+      "n_retained": 1483.0,
+      "n_tnbc": 55.0,
+      "n_os_events": 322.0,
+      "median_os_days": 2017.0
+    },
+    {
+      "cohort": "METABRIC",
+      "n_samples": 2509,
+      "n_retained": 1981.0,
+      "n_tnbc": 320.0,
+      "n_os_events": 1144.0,
+      "median_os_days": 3544.954166666677
+    },
+    {
+      "cohort": "TCGA-BRCA",
+      "n_samples": 213,
+      "n_retained": 213.0,
+      "n_tnbc": 33.0,
+      "n_os_events": 132.0,
+      "median_os_days": 2223.9666666666667
+    }
+  ]
+}
