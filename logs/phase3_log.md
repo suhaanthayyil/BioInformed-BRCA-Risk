@@ -40,3 +40,29 @@
 - 2026-05-16T23:10:19-04:00 Stage 8 main forest plot completed.
 
 - 2026-05-16T23:10:19-04:00 Stage 7 cohort flow diagram completed.
+
+- 2026-05-16T23:17:47-04:00 Stages 9-16 BMC package build started.
+
+- 2026-05-16T23:17:47-04:00 Stage 10 LaTeX compile skipped because pdflatex is missing.
+
+- 2026-05-16T23:17:48-04:00 Tables_combined.docx visual render QA skipped because LibreOffice/soffice is missing.
+
+- 2026-05-16T23:17:48-04:00 Stages 9-16 BMC package build completed.
+
+- 2026-05-16T23:20:25-04:00 Stages 9-16 BMC package build started.
+
+- 2026-05-16T23:20:26-04:00 Stage 10 LaTeX compile skipped because pdflatex is missing.
+
+- 2026-05-16T23:20:26-04:00 Tables_combined.docx visual render QA skipped because LibreOffice/soffice is missing.
+
+- 2026-05-16T23:20:27-04:00 Stages 9-16 BMC package build completed.
+
+- 2026-05-16T23:21:02-04:00 Stages 9-16 BMC package build started.
+
+- 2026-05-16T23:21:02-04:00 Stage 10 LaTeX compile skipped because pdflatex is missing.
+
+- 2026-05-16T23:21:03-04:00 Tables_combined.docx visual render QA skipped because LibreOffice/soffice is missing.
+
+- 2026-05-16T23:21:03-04:00 Stages 9-16 BMC package build completed.
+
+- 2026-05-16T23:21:51-04:00 Final Phase Three checks passed: pytest tests/ (3 passed) and ruff check src/ tests/ scripts/.

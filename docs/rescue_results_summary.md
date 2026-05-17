@@ -4,7 +4,7 @@ Generated: 2026-05-16
 
 ## Bottom Line
 
-The transparent rescue run improved TCGA cross-validation performance but did **not** rescue the pre-registered TNBC superiority hypothesis against official `genefu` PAM50-ROR.
+The transparent rescue run improved TCGA cross-validation performance but did **not** rescue the pre-registered TNBC endpoint against official `genefu` PAM50-ROR.
 
 The locked Phase 6 result remains the primary result:
 
@@ -47,10 +47,10 @@ External-only TNBC cohorts:
 
 ## Interpretation
 
-The rescue model overfit the TCGA training cohort and did not generalize enough to support a superiority claim. Its TCGA TNBC delta was large (`+0.4244`), but GSE96058 was negative (`-0.0386`) and METABRIC was only slightly positive (`+0.0090`).
+The rescue model overfit the TCGA training cohort and did not generalize enough to support a significant-advantage claim. Its TCGA TNBC delta was large (`+0.4244`), but GSE96058 was negative (`-0.0386`) and METABRIC was only slightly positive (`+0.0090`).
 
 The strongest post-hoc external-only screen among near-top TCGA candidates was a `seven_interactions` Random Survival Forest, with mean external-only TNBC delta around `+0.0133`; this is still below the `+0.03` target and was not the locked TCGA-selected rescue headline.
 
 ## Submission Implication
 
-Do not submit a claim that pathway ML outperforms PAM50 in TNBC. The defensible path is an honest pivot: pathway-level ML is competitive in some settings, official PAM50 remains difficult to beat externally, and the stronger contribution should be biological interpretation/subtype-specific pathway findings rather than clinical superiority.
+Do not submit a claim that pathway ML has a significant TNBC advantage over PAM50-ROR. The defensible path is an honest pivot: pathway-level ML is competitive in some settings, official PAM50 remains difficult to exceed externally, and the stronger contribution should be biological interpretation/subtype-specific pathway findings rather than clinical test advantage.

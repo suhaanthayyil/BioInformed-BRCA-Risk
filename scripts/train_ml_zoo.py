@@ -7,13 +7,10 @@ import json
 import os
 import pickle
 import sys
-from copy import deepcopy
-from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
 
 import duckdb
-import joblib
 import numpy as np
 import pandas as pd
 import torch
@@ -237,7 +234,7 @@ def model_spaces():
                 fit_baseline_model=True,
                 max_iter=100000,
             ),
-            [{"alpha": a, "l1_ratio": l} for a in [0.001, 0.01, 0.1, 1.0] for l in [0.1, 0.5, 0.9]],
+            [{"alpha": a, "l1_ratio": ratio} for a in [0.001, 0.01, 0.1, 1.0] for ratio in [0.1, 0.5, 0.9]],
         ),
         "Random_Survival_Forest": (
             lambda cfg: RandomSurvivalForest(
@@ -338,7 +335,6 @@ def main() -> None:
     x_df = train[features].copy()
     time = pd.to_numeric(train["os_days"], errors="coerce").to_numpy(float)
     event = pd.to_numeric(train["os_event"], errors="coerce").fillna(0).to_numpy(int).astype(bool)
-    y_surv = Surv.from_arrays(event, time)
     folds = list(StratifiedKFold(n_splits=N_SPLITS, shuffle=True, random_state=SEED).split(x_df, event.astype(int)))
 
     results = []
