@@ -1,0 +1,12 @@
+Table S15: External-only TNBC Sensitivity Analysis
+=======================================================
+Cohorts: GSE96058, METABRIC (TCGA-BRCA excluded as training set)
+
+  GSE96058: n=55, events=27, GBSA C=0.6055, PAM50 C=0.5759, delta=+0.0295 [-0.1313, 0.1947], p=0.7291
+  METABRIC: n=319, events=168, GBSA C=0.5150, PAM50 C=0.5250, delta=-0.0100 [-0.0696, 0.0508], p=0.7435
+
+Random-effects meta-analysis (DerSimonian-Laird):
+  delta = -0.0052, 95% CI [-0.0617, 0.0512], p = 0.8557, tau2 = 0.0000, I2 = 0.0%
+
+Fixed-effect meta-analysis:
+  delta = -0.0052, 95% CI [-0.0617, 0.0512], p = 0.8557
