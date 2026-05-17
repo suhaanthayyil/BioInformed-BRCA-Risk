@@ -26,28 +26,13 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-# LaTeX build artifacts
-*.aux
-*.log
-*.out
-*.bbl
-*.blg
-*.synctex.gz
-*.fls
-*.fdb_latexmk
-paper/*.pdf
-
 # Virtual environments
 .venv/
 venv/
 env/
 
-# Logs (generated per session)
-logs/
-
 # Archives
 figures/archive/
-paper/archive/
 
 # R artifacts
 .Rhistory

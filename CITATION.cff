@@ -1,13 +1,13 @@
 cff-version: 1.2.0
 title: "BRCA-PathwayML"
-message: "If you use this code, please cite the associated manuscript after publication."
+message: "If you use this code, please cite it."
 type: software
 authors:
   - family-names: Thayyil
     given-names: Suhaan
+    orcid: "https://orcid.org/0009-0003-4359-4400"
   - family-names: Nidee
     given-names: Eshaan
+    orcid: "https://orcid.org/0009-0001-9881-6643"
 year: 2026
-repository-code: "https://github.com/[TODO Suhaan: repository URL]"
-commit: "a704e9ff339ef765f9430baf859a27d0a4b2e001"
 license: MIT

@@ -1,28 +1,63 @@
 # BRCA-PathwayML
 
-BMC Cancer submission package for an interpretable pathway-based machine learning benchmark in breast cancer prognosis.
+Interpretable pathway-based machine learning for breast cancer prognosis: a four-cohort benchmark against PAM50-ROR.
 
-**Authors:** Suhaan Thayyil; Eshaan Nidee
+**Authors:** Suhaan Thayyil, Eshaan Nidee
 
-## Current Framing
+## Overview
 
-This repository contains a four-cohort analysis comparing a locked pathway-based survival machine learning model against official genefu PAM50-ROR. The pre-registered TNBC endpoint was not met. The active BMC Cancer framing is transparent benchmarking with comparable discrimination, modest secondary calibration and decision-curve signals, and clear limitations.
+This repository contains the code, analysis pipelines, and results for a four-cohort study comparing a pathway-based survival machine learning model (Gradient Boosted Survival Analysis) against official genefu PAM50-ROR for breast cancer prognosis.
 
-## Key Locked Result
+The pre-registered primary endpoint (TNBC meta-analyzed delta C-index >= +0.03, p < 0.05) was **not met**. The observed result was delta = +0.0144, 95% CI [-0.0472, +0.0760], p = 0.6466. All secondary analyses are exploratory.
 
-TNBC delta C-index for Gradient Boosted Survival versus PAM50-ROR = +0.0144, 95% CI [-0.0472, +0.0760], p=0.6466. The pre-registered threshold was delta >= +0.03 with p < 0.05. It was not met.
+## Key Results
 
-## Reproducibility
+- **Harmonized database:** 4,532 samples across four cohorts (TCGA-BRCA, GSE96058/SCAN-B, METABRIC, GSE20685).
+- **Analysis set:** 4,003 patients with usable overall survival and official PAM50-ROR scores.
+- **Headline model:** Gradient Boosted Survival (internal TCGA CV C-index = 0.642, delta vs Cox = +0.042).
+- **TNBC primary endpoint:** NOT MET (meta delta = +0.0144, p = 0.6466).
+- **Overall discrimination:** comparable to PAM50-ROR across external cohorts.
 
-- Analysis cohort: 4003 patients with survival and official PAM50-ROR across four cohorts. Harmonized database contains 4532 samples.
-- Main results: `results/`
-- BMC submission files: `deliverables/`
-- Locked endpoint: `docs/PRIMARY_ENDPOINT.md`
-- Phase Three story lock: `docs/STORY.md`
+## Repository Structure
+
+```
+src/              Python modules (models, survival analysis, data loading, features)
+src/ml/           DeepSurv implementation
+R/                Official genefu PAM50-ROR scoring (pam50.R)
+scripts/          Analysis pipeline scripts
+notebooks/        Jupyter notebooks (01-14: original analyses)
+results/          All results tables and QC reports
+figures/          Generated figures
+data/             Raw, processed, and clinical data
+models/           Trained model artifacts (gitignored)
+tests/            Pytest test suite
+docs/             Pre-registration endpoint, story lock, cohort notes
+```
 
 ## Data Sources
 
-TCGA-BRCA, GSE96058/SCAN-B, METABRIC from cBioPortal, and GSE20685. Raw data are not redistributed here.
+- **TCGA-BRCA:** GDC Data Portal (https://portal.gdc.cancer.gov)
+- **GSE96058/SCAN-B:** NCBI GEO (https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE96058)
+- **METABRIC:** cBioPortal (https://www.cbioportal.org/study/summary?id=brca_metabric)
+- **GSE20685:** NCBI GEO (https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE20685)
+
+Raw data are not redistributed in this repository.
+
+## Pre-registration
+
+The primary endpoint was locked before any external validation was run. See `docs/PRIMARY_ENDPOINT.md` (committed at `7783f4f0bfaaa6bdc611c78d33ccda621c6b243d`, before any results commits).
+
+## Reproduction
+
+1. Install Python dependencies: `pip install -r requirements.txt`
+2. Install R with the `genefu` package for official PAM50-ROR scoring.
+3. Pipeline scripts are in `scripts/`. Key steps:
+   - `scripts/harmonize_cohorts.py` -- build unified cohort database
+   - `scripts/score_pathways.py` -- compute pathway features
+   - `scripts/train_ml_zoo.py` -- train survival models
+   - `scripts/external_validation.py` -- run external validation
+   - `scripts/compute_clinical_baselines.py` -- compute clinical genomic baselines
+   - Phase 3 exploratory scripts: `within_subtype_analysis.py`, `calibration_analysis.py`, `dca_analysis.py`, `stability_analysis.py`
 
 ## License
 
