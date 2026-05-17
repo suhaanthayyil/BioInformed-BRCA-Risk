@@ -58,6 +58,7 @@ The primary endpoint was locked before any external validation was run. See `doc
    - `scripts/external_validation.py` -- run external validation
    - `scripts/compute_clinical_baselines.py` -- compute clinical genomic baselines
    - Phase 3 exploratory scripts: `within_subtype_analysis.py`, `calibration_analysis.py`, `dca_analysis.py`, `stability_analysis.py`
+   - Sensitivity analyses: `external_only_tnbc_sensitivity.py`, `feature_ablation.py`, `pathway_scoring_sensitivity.py`
 
 ## License
 
