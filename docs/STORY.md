@@ -14,10 +14,10 @@ Interpretable pathway-based ML achieves discrimination comparable to official PA
 
 ## Secondary findings (exploratory, post-hoc)
 
-- Within-subtype risk stratification: pending Stage 2.
-- Calibration: pending Stage 3.
-- Net benefit (DCA): pending Stage 4.
-- Stability of pathway attributions: pending Stage 5.
+- Within-subtype risk stratification: comparable, with no consistent within-subtype advantage over PAM50-ROR.
+- Calibration: headline ML showed lower mean ICI than PAM50-ROR (0.174 vs 0.204).
+- Net benefit (DCA): mean 5-year net benefit delta versus PAM50-ROR was +0.0156 across cohorts and thresholds.
+- Stability of pathway attributions: mean pairwise Spearman rho=0.395 (95% empirical interval -0.356 to 0.917); top-ranked features: Pathway_Hormone, age_at_dx, Pathway_DNA_Repair.
 
 ## What we do NOT claim
 
