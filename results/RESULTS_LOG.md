@@ -1,5 +1,17 @@
 # Results Log
 
+## Submitted Manuscript Crosswalk
+
+The submitted BMC Cancer manuscript is mapped to repository source files in `docs/SUBMITTED_MANUSCRIPT_REPOSITORY_CROSSWALK.md`.
+
+Additional traceability files:
+
+- `scripts/check_submission_consistency.py`: executable consistency check for central manuscript values.
+- `results/Table_S2_internal_cv_manuscript_crosswalk.csv`: internal CV manuscript summary versus exact repository output.
+- `results/Table_1_denominator_crosswalk.csv`: cohort denominator conventions.
+
+Important denominator note: METABRIC has 1,980 patients in the patient-characteristics set but 1,979 in C-index calculations because one sample has non-positive survival time.
+
 ## Sensitivity Analyses
 
 ### Table S15: External-only TNBC Sensitivity

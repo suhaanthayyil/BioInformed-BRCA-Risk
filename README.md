@@ -18,6 +18,16 @@ The pre-registered primary endpoint (TNBC meta-analyzed delta C-index >= +0.03, 
 - **TNBC primary endpoint:** NOT MET (meta delta = +0.0144, p = 0.6466).
 - **Overall discrimination:** comparable to PAM50-ROR across external cohorts.
 
+## Submitted Manuscript Crosswalk
+
+The submitted BMC Cancer manuscript is mapped to repository files in `docs/SUBMITTED_MANUSCRIPT_REPOSITORY_CROSSWALK.md`.
+
+Reviewer-facing traceability helpers:
+
+- `scripts/check_submission_consistency.py` verifies the central submitted values against repository CSV/JSON outputs.
+- `results/Table_S2_internal_cv_manuscript_crosswalk.csv` maps internal cross-validation values between the manuscript summary and exact reproducible output.
+- `results/Table_1_denominator_crosswalk.csv` documents patient-characteristics versus metric-evaluable denominators.
+
 ## Repository Structure
 
 ```

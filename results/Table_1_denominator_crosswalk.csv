@@ -1,0 +1,5 @@
+cohort,harmonized_n,patient_characteristics_final_n,metric_evaluable_n,patient_characteristics_events,metric_evaluable_events,source,note
+TCGA-BRCA,213,213,213,132,132,"results/Table_1_patient_characteristics.csv; results/Table_2_external_validation.csv","Training cohort. Harmonized and metric-evaluable counts match."
+GSE96058,1483,1483,1483,322,322,"results/Table_1_patient_characteristics.csv; results/Table_2_external_validation.csv","External cohort. Harmonized and metric-evaluable counts match for discrimination."
+METABRIC,2509,1980,1979,1144,1143,"results/Table_1_patient_characteristics.csv; results/Table_2_external_validation.csv","One sample in the final patient-characteristics set has non-positive survival time and is excluded from C-index calculations."
+GSE20685,327,327,327,83,83,"results/Table_1_patient_characteristics.csv; results/Table_2_external_validation.csv","External cohort. Receptor status unavailable in parsed metadata, so it does not contribute to TNBC analyses."
