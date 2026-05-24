@@ -2,7 +2,7 @@
 
 **Project**: BRCA-PathwayML v2 (revision after Communications Medicine + Scientific Reports desk rejections).
 
-**Target venue**: npj Breast Cancer (primary), BMC Cancer (backup).
+**Target venue**: npj Breast Cancer (primary), BMC Artificial Intelligence (current submitted venue after analysis reframing).
 
 **Primary claim**: A non-linear machine learning model (Random Survival Forest or Gradient-Boosted Survival or DeepSurv, whichever wins on internal CV) trained on 7 interpretable biological pathway scores is non-inferior to PAM50 and the Oncotype DX 21-gene surrogate on overall discrimination AND is superior to both on the triple-negative (TNBC) subgroup, across at least three independent breast cancer cohorts.
 

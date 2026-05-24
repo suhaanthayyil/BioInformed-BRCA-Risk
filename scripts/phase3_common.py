@@ -1,4 +1,4 @@
-"""Shared helpers for Phase Three BMC Cancer submission preparation."""
+"""Shared helpers for Phase Three BMC Artificial Intelligence submission preparation."""
 
 from __future__ import annotations
 

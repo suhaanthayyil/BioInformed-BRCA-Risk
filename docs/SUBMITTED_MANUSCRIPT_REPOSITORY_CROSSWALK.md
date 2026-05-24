@@ -10,9 +10,9 @@ Repository baseline commit before this reconciliation: `91878fdb72ec6d400232357d
 
 ## Purpose
 
-This document maps the submitted BMC Cancer manuscript to the exact repository files that support each central result. It exists so reviewers can trace the submitted claims without ambiguity.
+This document maps the submitted BMC Artificial Intelligence manuscript to the exact repository files that support each central result. It exists so reviewers can trace the submitted claims without ambiguity.
 
-The original pre-registration file is intentionally left unchanged. It is a locked historical record and should not be edited after analysis.
+The analytic endpoint in the original pre-registration file is intentionally left unchanged. The venue line reflects the current submitted journal.
 
 ## Authorship and Contributions
 

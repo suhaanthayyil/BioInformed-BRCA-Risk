@@ -2,7 +2,7 @@
 
 ## Submitted Manuscript Crosswalk
 
-The submitted BMC Cancer manuscript is mapped to repository source files in `docs/SUBMITTED_MANUSCRIPT_REPOSITORY_CROSSWALK.md`.
+The submitted BMC Artificial Intelligence manuscript is mapped to repository source files in `docs/SUBMITTED_MANUSCRIPT_REPOSITORY_CROSSWALK.md`.
 
 Additional traceability files:
 

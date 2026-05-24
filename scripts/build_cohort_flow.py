@@ -80,7 +80,7 @@ def plot_flow(counts: dict[str, dict[str, int]]) -> None:
         draw_arrow(ax, x, ys[0] - 0.07, ys[1] + 0.07)
         draw_arrow(ax, x, ys[1] - 0.07, ys[2] + 0.07)
         draw_arrow(ax, x, ys[2] - 0.07, ys[3] + 0.07)
-    ax.text(0.5, 0.97, "Cohort inclusion flow for Phase Three BMC Cancer analysis", ha="center", va="center", fontsize=11)
+    ax.text(0.5, 0.97, "Cohort inclusion flow for Phase Three BMC Artificial Intelligence analysis", ha="center", va="center", fontsize=11)
     fig.tight_layout()
     fig.savefig(FIGURES / "fig_cohort_flow.pdf")
     fig.savefig(FIGURES / "fig_cohort_flow.tiff", dpi=300)

@@ -20,7 +20,7 @@ The pre-registered primary endpoint (TNBC meta-analyzed delta C-index >= +0.03, 
 
 ## Submitted Manuscript Crosswalk
 
-The submitted BMC Cancer manuscript is mapped to repository files in `docs/SUBMITTED_MANUSCRIPT_REPOSITORY_CROSSWALK.md`.
+The submitted BMC Artificial Intelligence manuscript is mapped to repository files in `docs/SUBMITTED_MANUSCRIPT_REPOSITORY_CROSSWALK.md`.
 
 Reviewer-facing traceability helpers:
 
