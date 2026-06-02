@@ -13,7 +13,7 @@ The pre-registered primary endpoint (TNBC meta-analyzed delta C-index >= +0.03, 
 ## Key Results
 
 - **Harmonized database:** 4,532 samples across four cohorts (TCGA-BRCA, GSE96058/SCAN-B, METABRIC, GSE20685).
-- **Analysis set:** 4,003 patients with usable overall survival and official PAM50-ROR scores.
+- **Analysis sets:** 4,003 patients in patient-characteristics summaries; 4,002 metric-evaluable patients in the official PAM50-ROR discrimination analysis.
 - **Headline model:** Gradient Boosted Survival (internal TCGA CV C-index = 0.642, delta vs Cox = +0.042).
 - **TNBC primary endpoint:** NOT MET (meta delta = +0.0144, p = 0.6466).
 - **Overall discrimination:** comparable to PAM50-ROR across external cohorts.
@@ -38,11 +38,16 @@ scripts/          Analysis pipeline scripts
 notebooks/        Jupyter notebooks (01-14: original analyses)
 results/          All results tables and QC reports
 figures/          Generated figures
+paper/            Reviewer-facing LaTeX manuscript source and DOI-backed bibliography
 data/             Raw, processed, and clinical data
 models/           Trained model artifacts (gitignored)
 tests/            Pytest test suite
 docs/             Pre-registration endpoint, story lock, cohort notes
 ```
+
+## Manuscript LaTeX
+
+The repository includes a reviewer-facing LaTeX manuscript source at `paper/main.tex` and a DOI-backed BibTeX bibliography at `paper/main.bib`. The LaTeX source mirrors the submitted competitive-not-superior framing and is intended for traceability, not as a claim that the manuscript source is the journal's copyedited version.
 
 ## Data Sources
 

@@ -1,0 +1,461 @@
+\documentclass[11pt,letterpaper]{article}
+
+% Encoding and fonts
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+
+% Layout
+\usepackage[margin=1in]{geometry}
+\usepackage{setspace}
+\doublespacing
+\usepackage{lineno}
+\linenumbers
+\usepackage{xcolor}
+\usepackage{titlesec}
+\titleformat{\section}{\Large\bfseries\color{blue!70!black}}{}{0pt}{}
+\titleformat{\subsection}{\large\bfseries\color{blue!70!black}}{}{0pt}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{blue!70!black}}{}{0pt}{}
+
+% Math and symbols
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+% Tables
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{caption}
+\captionsetup[table]{labelfont=bf,font=normalsize,justification=raggedright,singlelinecheck=false}
+\captionsetup[figure]{labelfont=bf,font=normalsize,justification=raggedright,singlelinecheck=false}
+
+% Figures
+\usepackage{graphicx}
+\graphicspath{{../figures/}{figures/}}
+\usepackage{float}
+
+% References
+\usepackage[hidelinks]{hyperref}
+\usepackage{url}
+
+% Page header / footer
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot[C]{Page \thepage{} of \pageref{LastPage}}
+\renewcommand{\headrulewidth}{0pt}
+\usepackage{lastpage}
+
+% Bibliography style: numeric, bracketed
+
+% Tighter list spacing
+\usepackage{enumitem}
+
+\begin{document}
+
+% ============================================================
+% TITLE PAGE
+% ============================================================
+
+\begin{center}
+{\Large\bfseries\color{blue!70!black}
+Pathway-based machine learning is competitive with but does not exceed PAM50-ROR for breast cancer prognosis: a pre-registered multi-cohort benchmark in 4,532 patients
+\par}
+\vspace{1.5em}
+
+\textbf{Suhaan Thayyil$^{1,*}$, Eshaan Nidee$^2$}
+\vspace{0.5em}
+
+$^1$ Marvin Ridge High School, Waxhaw, NC, USA \\[0.2em]
+$^2$ Liberty High School, Frisco, TX, USA \\[0.2em]
+$^*$ Corresponding author: \texttt{3557971678@student.ucps.k12.nc.us} \\[0.2em]
+ORCID: S.T. 0009-0003-4359-4400; E.N. 0009-0001-9881-6643
+\end{center}
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+% ============================================================
+% ABSTRACT
+% ============================================================
+
+\section*{Abstract}
+
+\noindent\textbf{Background.} The PAM50 Risk-of-Recurrence (ROR) score is the most widely used genomic prognostic signal in breast cancer. Recent reports suggest pathway-based machine learning may outperform PAM50-ROR, particularly in triple-negative breast cancer (TNBC), but those studies often compare against surrogate rather than official PAM50, are not pre-registered, and validate in a single cohort. We tested whether pathway-based survival machine learning exceeds official PAM50-ROR under stricter conditions.
+
+\noindent\textbf{Methods.} A pre-registered protocol locked the primary endpoint (random-effects meta-analyzed $\Delta$C-index $\geq +0.03$ at $p < 0.05$ in TNBC versus official genefu::rorS), the comparator, and the model-selection rule before any external cohort was scored. Seven pathway activity scores were combined with two clinical covariates available across cohorts (age and ordinal stage). Six survival models were trained on TCGA-BRCA ($n = 213$) under five-fold cross-validation; the locked model was applied without refitting to GSE96058 / SCAN-B ($n = 1{,}483$), METABRIC ($n = 1{,}980$ evaluable), and GSE20685 ($n = 327$). Harmonized $N = 4{,}532$. We computed Harrell's C, calibration, decision curve analysis, NRI/IDI, and permutation-importance stability.
+
+\noindent\textbf{Results.} The pre-registered TNBC primary endpoint was not met (meta $\Delta$C $= +0.0144$, 95\% CI $-0.0472$ to $+0.0760$, $p = 0.6466$, $I^2 = 10.5\%$). A sensitivity excluding TCGA gave $\Delta$C $= -0.0052$ ($p = 0.86$). External discrimination was comparable (per-cohort C: locked model 0.555 to 0.673, PAM50-ROR 0.504 to 0.635). Feature ablation showed no combination exceeded PAM50-ROR on mean external C. Secondary signals favoured the locked model but were small: mean 5-year Integrated Calibration Index 0.125 versus 0.155, IDI $+0.032$ to $+0.113$, and mean $\Delta$NB $+0.016$. Three features were consistently top-ranked (Pathway-Hormone, age, Pathway-DNA-Repair). A transparent exploratory analysis across 391 model variants also failed to meet the threshold.
+
+\noindent\textbf{Conclusions.} Under pre-registration with the official PAM50 comparator and across four independent cohorts, pathway-based machine learning was competitive with but did not exceed PAM50-ROR, including in TNBC. It may best be considered an auxiliary signal for combination with PAM50-ROR rather than a replacement.
+
+\vspace{0.5em}
+\noindent\textbf{Keywords:} breast cancer; prognosis; survival analysis; machine learning; pathway analysis; PAM50; ROR; pre-registration; external validation; triple-negative breast cancer
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+% ============================================================
+% BACKGROUND
+% ============================================================
+
+\section*{Background}
+
+Breast cancer is biologically heterogeneous, and despite three decades of effort no single prognostic model has displaced the combination of the PAM50 intrinsic subtype call and the PAM50-derived Risk-of-Recurrence (ROR) score~\cite{parker2009supervised,perou2000molecular}. The ROR score, particularly in node-negative ER-positive disease, has consistently outperformed categorical subtype labels alone for both overall and distant recurrence-free survival across the cohorts used to support its regulatory approval~\cite{parker2009supervised,gendoo2016genefu}.
+
+Two factors continue to motivate work on replacements or augmentations of PAM50-ROR. First, the PAM50 framework was built from a fixed 50-gene centroid and does not exploit the much richer signal available in genome-wide RNA-seq. Second, the triple-negative breast cancer (TNBC) subgroup, which carries the highest population-level mortality, is poorly stratified by ROR~\cite{lehmann2011identification}. ROR was developed in ER-positive disease, and ROR scores in TNBC tend to cluster at the upper end of the scale, leaving limited room for within-subgroup discrimination.
+
+Several recent studies have applied machine learning to transcriptomic and pathway features for breast cancer prognosis and have reported sizeable advantages over PAM50~\cite{chakraborty2021explainable,liu2021identification,kallah2025breast}. Three recurring methodological gaps make the strength of these claims difficult to assess. First, pre-registration of a single falsifiable primary endpoint is rare in this literature, so machine-learning methods are evaluated against an ever-shifting target. Second, PAM50 baselines are frequently surrogate (often a one-hot encoded subtype label) rather than the official genefu::rorS implementation~\cite{gendoo2016genefu}, which mechanically inflates apparent machine-learning advantage. Third, external validation, when present, typically uses a single cohort that was selected after model development. Each of these inflates effect sizes and introduces selective-reporting bias~\cite{rudin2019stop,nagendran2020artificial}.
+
+The present study addresses all three. Following methodological revision after desk-level review of an earlier two-cohort manuscript, we pre-registered a single TNBC primary endpoint with a fixed superiority margin and significance threshold before external validation; expanded harmonization from two to four publicly available cohorts (TCGA-BRCA, GSE96058/SCAN-B, METABRIC, and GSE20685) covering 4,532 patients; replaced the prior surrogate PAM50 with the official genefu::rorS implementation; and replaced classifier-on-binary-outcome modelling with a six-model survival zoo (Cox, Coxnet, Random Survival Forest, Gradient-Boosted Survival Analysis, DeepSurv, and a stacked ensemble) trained on a single source cohort and applied without refitting elsewhere.
+
+Our primary question was whether a pathway-based machine-learning survival model can exceed official PAM50-ROR by a clinically meaningful margin ($\Delta$C-index $\geq +0.03$, $p < 0.05$) in the TNBC subgroup across multiple cohorts. Secondary questions included whether the locked model improves over a regularized Cox baseline; whether pathway-level attributions are stable across resampling; whether the locked model is better calibrated than PAM50-ROR; and whether it produces positive net benefit in decision curve analysis.
+
+% ============================================================
+% METHODS
+% ============================================================
+
+\section*{Methods}
+
+\subsection*{Pre-registration}
+
+The primary endpoint, superiority threshold ($\Delta$C-index $\geq +0.03$, $p < 0.05$), PAM50 comparator (genefu::rorS), and model-selection rule were locked in a public code repository at 2026-05-16T11:10:43-04:00, before external validation. The pre-registration specified that the best non-linear survival model would be selected using TCGA-BRCA internal cross-validation and then applied to external cohorts without refitting. Post-lock changes to the primary endpoint were not permitted. The 391-variant rescue screen reported below was a transparent exploratory post-primary sensitivity analysis, not a replacement primary endpoint.
+
+\subsection*{Cohorts and ethics}
+
+Four publicly available, fully de-identified breast cancer cohorts were harmonized: TCGA-BRCA~\cite{tcga2012comprehensive} (training, $n = 213$), GSE96058/SCAN-B~\cite{saal2015scanb,brueffer2018clinical} ($n = 1{,}483$), METABRIC~\cite{curtis2012genomic,pereira2016somatic} (cBioPortal Datahub release; $n = 2{,}509$ harmonized, $n = 1{,}980$ evaluable after pre-specified filters; one sample with non-positive overall survival time is excluded from C-index analyses but retained in patient-characteristics summary statistics, yielding 1,144 events in the patient-characteristics summary and 1,143 events contributing to C-index calculations), and GSE20685~\cite{kao2011correlation} ($n = 327$). Total harmonized $N = 4{,}532$; $N = 4{,}003$ evaluable for patient-characteristics summaries; $N = 4{,}002$ evaluable for the official PAM50-ROR head-to-head discrimination analysis (1,681 patient-characteristics events; 1,680 events contributing to C-index calculations). Because all data are publicly available and de-identified, this study is exempt from institutional review board oversight under 45 CFR 46.102(e). Per-cohort patient characteristics appear in Table~\ref{tab:characteristics}. The patient-flow diagram is shown in Figure~\ref{fig:flow}.
+
+\subsection*{Expression harmonization}
+
+Expression matrices were obtained at their source-cohort normalization (TCGA log2 RSEM, SCAN-B FPKM-transformed, METABRIC microarray z-scored against a diploid reference, and GSE20685 GPL570 RMA). Training-cohort scaling parameters were not applied to external cohorts. Each external cohort was independently z-score normalized at the gene level, because cross-platform scaling transfer is a documented source of leakage~\cite{borisov2022transcriptomic}. Pathway scores were computed in each cohort with the same deterministic rank-percentile aggregation, using genes present in that cohort. Per-cohort gene-coverage statistics are reported in Supplementary Table~S1.
+
+\subsection*{Pathway scores}
+
+Seven pathway activity scores were aggregated from MSigDB v2024.1.Hs Hallmark, Reactome, and KEGG MEDICUS gene sets (Table~\ref{tab:pathways}). These seven were chosen a priori to span the biological axes most consistently implicated in breast cancer prognosis: cell-cycle and proliferation, hormone (estrogen and androgen) response, immune response, DNA repair, metabolism, stromal/EMT, and apoptosis/stress~\cite{hanahan2011hallmarks,salgado2015tils,liberzon2015hallmark}. Each pathway score is the mean of z-scored, rank-percentile transformed sample expression across all curated component gene sets within that pathway.
+
+\subsection*{Survival models and locked-model selection}
+
+Six survival models were fit on TCGA-BRCA alone under five-fold stratified cross-validation with fixed seed 42. The feature set consisted of the seven pathway scores together with two clinical covariates available across cohorts (age at diagnosis; ordinal disease stage where reported), for a total of nine input features. A compact local hyperparameter grid was evaluated on TCGA-BRCA only, and the final selected configurations were: regularized Cox proportional hazards~\cite{cox1972regression} with L2 penalizer 0.01; elastic-net Cox with alpha 0.001 and $\ell_1$-ratio 0.1; Random Survival Forest~\cite{ishwaran2008random} with 500 trees, maximum depth 4, minimum leaf size 1, and $\sqrt{p}$ split features; Gradient-Boosted Survival Analysis with 100 estimators, learning rate 0.03, maximum depth 1, and subsample 1.0; DeepSurv~\cite{katzman2018deepsurv} with hidden dimensions 128 and 64, dropout 0.2, learning rate 0.0005, weight decay 0.0001, 150 epochs, and early-stopping patience 20; and a stacked ensemble combining Gradient-Boosted Survival Analysis, DeepSurv, and elastic-net Cox with a Cox meta-learner. The model with the highest TCGA-BRCA internal cross-validation C-index was Gradient-Boosted Survival Analysis, which was locked for external validation (Supplementary Table~S2).
+
+\subsection*{Clinical genomic baselines}
+
+The PAM50 intrinsic subtype call and ROR-S score were computed using the official R package genefu, specifically the functions \texttt{molecular.subtyping} and \texttt{rorS}~\cite{gendoo2016genefu}. An Oncotype DX 21-gene surrogate score was computed using published group weights~\cite{paik2004multigene} applied to within-cohort z-scored expression, restricted to ER-positive samples (not evaluable in GSE20685 because ER status was missing). MammaPrint~\cite{vantveer2002gene}, EndoPredict, and Breast Cancer Index could not be computed because validated public coefficient sets are unavailable; rather than fabricate surrogate implementations we report these as unavailable comparators (Supplementary Table~S1).
+
+\subsection*{External validation, head-to-head, and meta-analysis}
+
+For each external cohort we computed Harrell's C, Uno's C where applicable, time-dependent AUC at 3, 5, and 10 years, 5-year Brier score, and Cox hazard ratios with 95\% confidence intervals for predicted risk strata. Head-to-head $\Delta$C-index comparisons used paired bootstrap (1,000 iterations) at the patient level. The pre-registered primary endpoint was the DerSimonian-Laird random-effects~\cite{dersimonian1986meta} meta-analyzed $\Delta$C-index of the locked model versus PAM50-ROR-official in TNBC across all cohorts contributing at least five TNBC events. GSE20685 lacked receptor-status annotation and therefore could not contribute to TNBC analyses.
+
+\subsection*{Calibration, NRI/IDI, and decision curve analysis}
+
+Calibration at 5 and 10 years used calibration slope, intercept, calibration-in-the-large, and the Integrated Calibration Index (ICI). NRI and IDI~\cite{pencina2008evaluating,vickers2010traditional} versus PAM50-ROR were computed at 0.10 and 0.20 5-year mortality-risk thresholds with 1,000-iteration bootstrap confidence intervals. Decision curve analysis~\cite{vickers2006decision} used thresholds from 0.05 to 0.50 at a 5-year horizon.
+
+\subsection*{Stability and sensitivity analysis}
+
+Permutation-importance ranks were computed on 100 stratified 80\% TCGA subsamples without replacement, stratified on event status; rank stability was summarized by mean pairwise Spearman $\rho$, mean rank, standard deviation of rank, and frequency of top-3 appearance. A transparent exploratory post-primary sensitivity analysis evaluated 391 candidate model and feature variants (expanded pathway feature sets, pathway interactions, TNBC-weighted training, alternative survival model architectures); the same locked-model selection rule was re-applied. The sensitivity-analysis endpoint result is reported regardless of outcome.
+
+\subsection*{Code and reproducibility}
+
+All analysis code, processing scripts, the pre-registration record, and pathway gene lists are openly available at \url{https://github.com/suhaanthayyil/BioInformed-BRCA-Risk}. All seeds are fixed (global seed 42). MSigDB v2024.1.Hs metadata, including download SHA256 checksums for each cohort, are recorded in the processed-data folder of the repository.
+
+% ============================================================
+% RESULTS
+% ============================================================
+
+\section*{Results}
+
+\subsection*{Cohort characteristics}
+
+The four harmonized cohorts spanned 4,532 patients (Figure~\ref{fig:flow}; Table~\ref{tab:characteristics}). TCGA-BRCA contributed 213 training patients (132 events; median follow-up 73 months), GSE96058 1,483 (322 events; 66 months), METABRIC 1,980 evaluable (1,144 events in the patient-characteristics summary; 1,143 events contributing to C-index analyses after exclusion of one sample with non-positive survival time; 116 months), and GSE20685 327 (83 events; 97 months). PAM50 subtype distributions matched expectations (combined Luminal A and Luminal B 52\% to 71\%; Basal-like 12\% to 18\%). TNBC patient counts available for the primary endpoint were 55 in GSE96058 (27 events), 320 in METABRIC (168 events), and 33 in TCGA-BRCA (19 events); GSE20685 lacked receptor status and could not contribute to TNBC analyses.
+
+\subsection*{Internal cross-validation: the locked model exceeds Cox modestly}
+
+Internal TCGA cross-validation C-index values were Cox PH 0.600, Coxnet 0.601, Random Survival Forest 0.601, Gradient-Boosted Survival Analysis 0.642, DeepSurv 0.609, and Stacked Ensemble 0.626 (Supplementary Table~S2). The locked Gradient-Boosted Survival Analysis model exceeded the regularized Cox baseline by $\Delta$C $= +0.042$, meeting the secondary endpoint of machine-learning over Cox by at least $+0.02$ in at least one cohort.
+
+\subsection*{External discrimination: comparable to PAM50-ROR}
+
+Table~\ref{tab:headtohead} summarizes external Harrell's C values for the locked model and the official PAM50-ROR comparator. Across the three external cohorts, locked-model C-indices were 0.565 (GSE20685), 0.663 (GSE96058), and 0.555 (METABRIC), versus PAM50-ROR-official 0.635, 0.633, and 0.595. The locked model led PAM50-ROR in GSE96058 ($+0.030$) and trailed it in METABRIC ($-0.040$) and GSE20685 ($-0.070$). On the TCGA training cohort, where leakage cannot be excluded, the locked model exceeded PAM50-ROR by $+0.169$; the very low TCGA-internal PAM50-ROR value of 0.504 is a documented property of the TCGA cohort and not a flaw in the comparator~\cite{gendoo2016genefu}.
+
+\subsection*{Pre-registered TNBC primary endpoint: not met}
+
+The pre-registered primary endpoint was not met (Figure~\ref{fig:forest}; Table~\ref{tab:tnbc}). The TNBC random-effects meta-analyzed $\Delta$C-index of the locked model versus PAM50-ROR-official was $+0.0144$ (95\% CI $-0.0472$ to $+0.0760$, $p = 0.6466$, three cohorts contributing, $I^2 = 10.5\%$, $\tau^2 < 0.001$). Cohort-level $\Delta$C-index values were $+0.030$ in GSE96058 (95\% CI $-0.131$ to $+0.195$), $-0.010$ in METABRIC (95\% CI $-0.070$ to $+0.051$), and $+0.111$ in TCGA-BRCA (95\% CI $-0.027$ to $+0.272$). The pooled effect was directionally positive but statistically indistinguishable from zero and well below the pre-registered $+0.03$ superiority margin.
+
+\subsection*{External-only TNBC sensitivity analysis}
+
+Because TCGA-BRCA was the training cohort, a sensitivity analysis excluded it from the TNBC meta-analysis. Restricted to GSE96058 ($n = 55$, 27 events) and METABRIC ($n = 319$, 168 events; one sample excluded for non-positive survival time from C-index analyses), totalling 374 patients and 195 events, the cohort-level TNBC $\Delta$C-index values were $+0.0295$ in GSE96058 ($p = 0.73$) and $-0.0100$ in METABRIC ($p = 0.74$). The DerSimonian-Laird random-effects pooled estimate was $\Delta$C $= -0.0052$ (95\% CI $-0.0617$ to $+0.0512$, $p = 0.8557$, $I^2 = 0\%$). Excluding the training cohort flips the pooled point estimate slightly negative and removes any remaining suggestion of an external TNBC advantage. The endpoint of the sensitivity analysis was also not met.
+
+\subsection*{Within-subtype analysis: no consistent advantage}
+
+Within-subtype meta-analyzed $\Delta$C-index values were Luminal A $+0.012$ ($p = 0.72$, $I^2 = 49\%$), Luminal B $+0.042$ ($p = 0.48$, $I^2 = 88\%$), HER2-enriched $-0.012$ ($p = 0.86$, $I^2 = 80\%$), Basal-like $+0.035$ ($p = 0.15$, $I^2 = 0\%$), and Normal-like $-0.076$ ($p = 0.24$, $I^2 = 14\%$, two cohorts) (Figure~\ref{fig:subtype}; Supplementary Tables~S8 and~S9). None of the five subtypes showed a statistically significant or consistently directional advantage for the locked model over PAM50-ROR. Within-subtype Kaplan-Meier curves per cohort are provided as Supplementary Figures.
+
+\subsection*{Feature ablation and incremental value}
+
+An exploratory feature-ablation analysis evaluated the incremental contribution of pathway features beyond clinical and PAM50-ROR variables (Table~\ref{tab:ablation}; Supplementary Table~S5). Multiple feature-set combinations were trained on TCGA-BRCA under the locked protocol and applied without refitting to each external cohort. The clinical-feature set comprises the two clinical covariates available across cohorts (age at diagnosis; ordinal disease stage where reported); these are also the two clinical features used in the locked primary model. Other clinical covariates (tumor size, lymph node status, hormone receptor status, HER2 status, Nottingham grade, and Ki-67 status) are available for some cohorts but not all and were not used in the cross-cohort head-to-head.
+
+Among the eight combinations, the Pathway plus Clinical model (9 features) achieved the highest mean external Harrell's C-index of 0.594, with a mean $\Delta$C of $-0.027$ versus PAM50-ROR-only across the three external cohorts. Clinical-only features outperformed pathway-only features (mean external C 0.574 versus 0.516). Removing the Hormone pathway from the combined model dropped mean external C from 0.594 to 0.548, which identifies Pathway-Hormone as the single most prognostically informative pathway feature and is consistent with the permutation-importance stability result reported below. Single-pathway models without clinical features performed at or below the discrimination floor (Proliferation-only mean external C $= 0.470$). No feature combination exceeded PAM50-ROR on mean external Harrell's C, which corroborates the primary endpoint conclusion that pathway-based machine learning is competitive with but does not exceed official PAM50-ROR.
+
+\subsection*{Calibration: lower mean ICI than PAM50-ROR}
+
+At the 5-year horizon, the locked model showed Integrated Calibration Index values of 0.073 (TCGA-BRCA), 0.155 (GSE96058), 0.111 (METABRIC), and 0.161 (GSE20685), versus PAM50-ROR-official 0.145, 0.137, 0.131, and 0.206 (Table~\ref{tab:calibration}; Figure~\ref{fig:calibration}). Mean ICI across cohorts was 0.125 for the locked model and 0.155 for PAM50-ROR. PAM50-ROR showed especially poor calibration on METABRIC at the 10-year horizon (slope 3.92, intercept $-5.68$, indicating substantial miscalibration). The locked model's calibration was monotonically closer to the diagonal in three of four cohorts. This is a secondary, exploratory finding.
+
+\subsection*{Decision curve analysis: small positive net benefit}
+
+Across thresholds from 0.05 to 0.50 at the 5-year horizon, net benefit favored the locked model versus PAM50-ROR by a mean of $+0.016$ across cohorts and thresholds (Figure~\ref{fig:dca}; Supplementary Table~S11). The mean delta in net benefit was $+0.046$ in TCGA-BRCA (the training cohort, where over-fitting cannot be excluded), $+0.009$ in GSE96058, $-0.002$ in METABRIC, and $+0.009$ in GSE20685; the grand mean is therefore largely driven by TCGA. The largest cohort-averaged gains occurred at thresholds of 0.20 to 0.325 where the two models' predicted risk strata diverge most. At low thresholds (0.05 to 0.125) both models converge with ``treat all'' and provide no incremental benefit; at high thresholds the PAM50-ROR strategy converges with ``treat none'' while the locked model retains a small positive net benefit in TCGA-BRCA only.
+
+\subsection*{Reclassification: positive IDI in every cohort}
+
+The Integrated Discrimination Improvement of the locked model versus PAM50-ROR was $+0.113$ in TCGA-BRCA (95\% CI 0.073 to 0.154), $+0.102$ in GSE96058 (0.083 to 0.121), $+0.032$ in METABRIC (0.020 to 0.045), and $+0.036$ in GSE20685 (0.010 to 0.064; Supplementary Table~S12). The continuous Net Reclassification Index (event NRI plus non-event NRI) at the 0.20 5-year mortality-risk threshold was $+0.24$, $+0.13$, $+0.10$, and $+0.15$ in the four cohorts, with all lower bounds above zero. These exploratory findings suggest that the locked model captures variance not present in PAM50-ROR, even when overall discrimination is comparable.
+
+\subsection*{Pathway-scoring sensitivity analysis}
+
+An exploratory sensitivity analysis examined whether the choice of pathway-score aggregation method affects results (Supplementary Table~S14). Three aggregation methods were compared under the locked model architecture and training protocol: deterministic rank-percentile aggregation (the primary method), mean-z aggregation, and single-sample GSEA (ssGSEA) via GSVA. Mean external Harrell's C-index across the three external cohorts was 0.594 for rank-percentile, 0.593 for ssGSEA, and 0.567 for mean-z. Rank-percentile and ssGSEA were therefore essentially equivalent; mean-z showed modest degradation. The conclusion is that the manuscript's primary findings are insensitive to pathway aggregation method within the rank-based family, and the choice of rank-percentile as the primary method does not flatter or disadvantage the locked model relative to ssGSEA.
+
+\subsection*{Feature-importance stability: modest, with three consistently top-ranked features}
+
+Across 100 stratified 80\% TCGA subsamples without replacement, stratified on event status, the mean pairwise Spearman rank correlation of permutation importance was $\rho = 0.395$ (95\% empirical interval $-0.356$ to $+0.917$). Pathway-Hormone (mean rank 1.80, SD 1.64, top-3 in 92\% of subsamples), age at diagnosis (mean rank 3.20, SD 2.68, top-3 in 75\%), and Pathway-DNA-Repair (mean rank 4.29, SD 2.88, top-3 in 62\%) were the only consistently top-ranked features (Figure~\ref{fig:stability}; Supplementary Table~S13). All other features appeared in the top-3 in fewer than half of the subsamples (stage\_ordinal 26\%, Pathway-Stromal-EMT 5\%, Pathway-Proliferation 6\%, Pathway-Metabolism 3\%, Pathway-Immune 2\%, Pathway-Apoptosis-Stress 1\%), with mean ranks of 5.0 to 6.5 and rank standard deviations of 1.1 to 1.7.
+
+\subsection*{Exploratory sensitivity analysis: did not produce external superiority}
+
+The transparent exploratory post-primary sensitivity analysis evaluated 391 candidate variants (expanded pathway feature sets, pathway interaction terms, TNBC-weighted training, alternative survival architectures, and DeepSurv variants); the same locked-model selection rule was re-applied. The TCGA-composite-selected variant was a DeepSurv model with seven-pathway interaction features (43 features, TCGA composite cross-validation C $= 0.641$). The all-protocol TNBC $\Delta$C-index versus PAM50-ROR-official was $+0.1284$ (95\% CI $-0.131$ to $+0.388$, $p = 0.332$). The external-only TNBC $\Delta$C-index was $+0.0023$ (95\% CI $-0.062$ to $+0.067$, $p = 0.945$). The sensitivity-analysis endpoint was not met. We report this transparently to discourage selective omission of unfavorable post-hoc model variants.
+
+% ============================================================
+% DISCUSSION
+% ============================================================
+
+\section*{Discussion}
+
+Across four independent breast cancer cohorts ($n = 4{,}532$ harmonized, $n = 4{,}003$ patient-characteristics evaluable, $n = 4{,}002$ metric-evaluable in the official PAM50-ROR head-to-head), a pre-registered pathway-based survival machine-learning model did not exceed official PAM50-ROR by the pre-specified $+0.03$ C-index margin in TNBC ($+0.0144$, $p = 0.6466$). Internal gains over a regularized Cox baseline ($+0.042$ C-index) did not translate into external superiority over PAM50-ROR.
+
+This pattern of a competitive but non-superior locked model contrasts with several recent reports of substantial machine-learning advantages in breast cancer prognosis~\cite{chakraborty2021explainable,liu2021identification,kallah2025breast}. Three methodological differences likely explain most of the gap. First, the comparator here is the official genefu::rorS implementation rather than a surrogate; using a surrogate PAM50 typically lowers comparator C-index by 0.04 to 0.08~\cite{gendoo2016genefu}, which mechanically inflates apparent machine-learning advantage. Second, the endpoint was pre-registered with a fixed superiority margin and significance threshold; a meta-analysis of clinical AI studies estimates that post-hoc model selection inflates reported $\Delta$AUC and $\Delta$C values by 0.01 to 0.03~\cite{nagendran2020artificial}. Third, performance was assessed across four cohorts rather than a single, post-hoc-selected validation set.
+
+The reading we take from this is that the null result reflects not weakness in the pathway-based approach itself, but the removal of methodological tailwinds that are present in much of the prior literature. Official PAM50-ROR is a strong baseline, and exceeding it under pre-registration is harder than the published record suggests.
+
+Where pathway-based machine learning may add value is in average calibration, reclassification, and net benefit, with cohort-level exceptions. The locked model showed lower mean 5-year ICI than PAM50-ROR (0.125 versus 0.155), positive IDI in every cohort, and a small positive mean change in net benefit ($+0.016$) across decision-curve thresholds. The clinical relevance of these magnitudes should not be overstated. An IDI of around $+0.03$ is below the level most clinical guideline panels consider decision-relevant~\cite{vickers2010traditional}, and the net-benefit gain is below the noise floor at low thresholds. These signals nonetheless identify pathway-based machine learning as a candidate auxiliary signal to combine with PAM50-ROR, not a replacement.
+
+The TNBC null result is informative on its own terms. Across three cohorts and 408 TNBC patients with 214 events, there is no statistically detectable advantage of the locked model over PAM50-ROR. A sensitivity analysis that excludes the TCGA training cohort flips the pooled point estimate slightly negative (external-only meta $\Delta$C $= -0.0052$, 95\% CI $-0.0617$ to $+0.0512$, $p = 0.8557$, $I^2 = 0\%$), which closes off the natural reader objection that a training-cohort contribution might mask a positive external effect. The confidence interval remains wide enough that a smaller real effect cannot be excluded, but the assembled public-data TNBC event count is insufficient to support a superiority claim. Among other subtypes, Luminal B ($+0.042$) and Basal-like ($+0.035$) showed nominally positive point estimates but high cross-cohort heterogeneity ($I^2$ up to 88\%), which precludes any clinical claim without further data.
+
+The feature-ablation analysis reinforces the primary conclusion. Across multiple exploratory feature combinations, no configuration exceeded PAM50-ROR on mean external Harrell's C-index, including the best combination (Pathway plus Clinical, 9 features, mean external C $= 0.594$, $\Delta$C $= -0.027$). Clinical-only features (age and ordinal stage) outperformed pathway-only features on average external discrimination (C $= 0.574$ versus 0.516), and removing Pathway-Hormone from the best combination dropped mean external C by 0.046, which identifies the hormone axis as the single most informative pathway score and is consistent with the permutation-importance stability finding. The pathway-scoring sensitivity analysis showed that rank-percentile and ssGSEA are essentially equivalent (mean external C 0.594 versus 0.593), so the choice of rank-percentile as the primary aggregation method does not flatter the locked model relative to the more widely used ssGSEA.
+
+The exploratory sensitivity analysis improved TCGA internal cross-validation TNBC performance substantially but did not generalize externally (external-only TNBC $\Delta$C $= +0.002$, $p = 0.95$). This is a recognizable overfitting pattern. We retain this result in the manuscript for two reasons. First, transparent reporting discourages the prevalent field practice of selectively omitting unfavorable post-hoc analyses. Second, the failure of 391 candidate variants under a pre-specified selection rule directly answers the natural reader objection that a slightly different model or feature set would have crossed the superiority threshold.
+
+The high subsample variance of permutation-importance ranks for most pathway features (rank standard deviations of 1.1 to 1.7 out of nine possible ranks) cautions against reading any single ML-derived ``important'' pathway as biologically privileged in this dataset. The three features that did rank stably (Pathway-Hormone, age at diagnosis, and Pathway-DNA-Repair) align with established breast cancer biology; hormone signalling and DNA repair are the two axes with the strongest prior prognostic evidence and the largest commercial genomic tests built around them~\cite{paik2004multigene,vantveer2002gene}.
+
+\subsection*{Limitations}
+
+The study has several limitations relevant to its null conclusion. First, the harmonized dataset, while large, is restricted to publicly available cohorts with overall survival; treatment-stratified analyses could not be performed uniformly because treatment annotation is incomplete in three of four cohorts. Second, the official PAM50-ROR was scored on within-cohort z-scored expression following the recommended genefu workflow, which is not identical to the commercial Prosigna pipeline; absolute ROR values would differ in a commercial assay setting. Third, MammaPrint, EndoPredict, and Breast Cancer Index could not be evaluated as comparators because validated public coefficient sets are unavailable, and we elected not to fabricate surrogate implementations. Fourth, TNBC sample sizes (408 patients, 214 events) remain limited and cannot exclude smaller true effects around the null. Fifth, the TCGA training cohort is small ($n = 213$) for survival model development, although external validation in 4,319 additional patients reduces but does not eliminate over-fitting concerns. Sixth, all analyses are retrospective; no prospective validation has been performed.
+
+% ============================================================
+% CONCLUSIONS
+% ============================================================
+
+\section*{Conclusions}
+
+Under a pre-registered protocol that uses an official rather than surrogate PAM50 comparator and four-cohort external validation ($n = 4{,}532$ harmonized), interpretable pathway-based survival machine learning was competitive with but did not significantly exceed PAM50-ROR for breast cancer overall survival, including in the pre-specified TNBC subgroup. Secondary findings in calibration, decision-curve net benefit, and integrated discrimination improvement were directionally favorable on average but small in magnitude, with cohort-level exceptions. This null primary endpoint does not invalidate pathway-level machine learning in breast cancer prognosis. It does indicate that under reporting standards that remove documented sources of inflation, the headline advantages claimed in some recent ML breast cancer studies should be interpreted with caution. Pathway-based machine learning may best be considered an auxiliary signal for combination with PAM50-ROR rather than a replacement for established genomic prognostic tools.
+
+% ============================================================
+% ABBREVIATIONS
+% ============================================================
+
+\section*{List of abbreviations}
+
+AUC, area under the receiver operating characteristic curve; BCI, Breast Cancer Index; BRCA, breast invasive carcinoma; CI, confidence interval; CV, cross-validation; DCA, decision curve analysis; ER, estrogen receptor; FPKM, fragments per kilobase per million; GBSA, Gradient-Boosted Survival Analysis; HR, hazard ratio; ICI, Integrated Calibration Index; IDI, Integrated Discrimination Improvement; ML, machine learning; NRI, Net Reclassification Index; OS, overall survival; PAM50, Prediction Analysis of Microarray 50; PgR, progesterone receptor; ROR, Risk of Recurrence; RSEM, RNA-Seq by Expectation-Maximization; RSF, Random Survival Forest; SCAN-B, Sweden Cancerome Analysis Network Breast; ssGSEA, single-sample Gene Set Enrichment Analysis; TCGA, The Cancer Genome Atlas; TNBC, triple-negative breast cancer.
+
+% ============================================================
+% DECLARATIONS
+% ============================================================
+
+\section*{Declarations}
+
+\noindent\textbf{Ethics approval and consent to participate.} This study uses only publicly available, fully de-identified data and is exempt from institutional review board oversight under 45 CFR 46.102(e). No new patient specimens were collected.
+
+\noindent\textbf{Consent for publication.} Not applicable.
+
+\noindent\textbf{Availability of data and materials.} TCGA-BRCA data are available via the GDC Data Portal (\url{https://portal.gdc.cancer.gov}). SCAN-B/GSE96058 data are available via NCBI GEO (accession GSE96058). METABRIC data are available via cBioPortal Datahub (\url{https://datahub.assets.cbioportal.org/brca_metabric.tar.gz}). GSE20685 data are available via NCBI GEO (accession GSE20685). No new data were generated.
+
+\noindent\textbf{Competing interests.} The authors declare no competing interests.
+
+\noindent\textbf{Funding.} No external funding was received for this work.
+
+\noindent\textbf{Authors' contributions.} S.T. conceived the study, designed the pre-registered protocol and analytical framework, implemented the harmonization and modelling pipelines, performed all computational analyses, and drafted the manuscript. E.N. contributed to study design, biological interpretation of results, and critical revision of the manuscript for important intellectual content. Both authors approved the final version.
+
+\noindent\textbf{Acknowledgements.} The authors thank the patients and research teams responsible for the TCGA-BRCA, GSE96058/SCAN-B, METABRIC, and GSE20685 datasets. Results are in part based on data generated by the TCGA Research Network (\url{https://www.cancer.gov/tcga}).
+
+\noindent\textbf{Code availability.} All analysis code, processing scripts, the pre-registration record, and pathway gene lists are openly available at \url{https://github.com/suhaanthayyil/BioInformed-BRCA-Risk} under an open-source licence. All seeds are fixed (global seed 42).
+
+% ============================================================
+% TABLES
+% ============================================================
+
+\clearpage
+\section*{Tables}
+
+\begin{table}[H]
+\caption{\textbf{Cohort characteristics.} Counts after harmonization filters. Subtype distribution reported as \texttt{genefu::molecular.subtyping} calls. IQR, interquartile range; FU, follow-up; OS, overall survival; TNBC, triple-negative breast cancer; N/A, not available in source data.}
+\label{tab:characteristics}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabularx}{\textwidth}{lXXXX}
+\toprule
+\textbf{Characteristic} & \textbf{TCGA-BRCA} & \textbf{GSE96058} & \textbf{METABRIC} & \textbf{GSE20685} \\
+\midrule
+Harmonized $n$ & 213 & 1,483 & 2,509 (1,980 evaluable) & 327 \\
+Median age, years (IQR) & 57 (46-68) & 65 (55-73) & 62 (51-71) & 46 (40-55) \\
+ER positive, $n$ (\%) & 118 (70.2) & 1,251 (94.1) & 1,507 (76.1) & N/A \\
+HER2 positive, $n$ (\%) & 20 (13.3) & 183 (12.4) & 247 (12.5) & N/A \\
+Luminal A / Luminal B (\%) & 18.3 / 33.3 & 42.3 / 27.9 & 29.2 / 41.8 & 35.5 / 22.0 \\
+HER2-enriched (\%) & 12.7 & 11.2 & 12.1 & 22.9 \\
+Basal-like (\%) & 18.3 & 12.0 & 13.7 & 14.7 \\
+Normal-like (\%) & 17.4 & 6.5 & 3.2 & 4.9 \\
+Median FU, months & 73 & 66 & 116 & 97 \\
+OS events, $n$ & 132 & 322 & 1,144 & 83 \\
+TNBC $n$ / events & 33 / 19 & 55 / 27 & 320 / 168 & N/A \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\caption{\textbf{Seven pathway activity scores and component gene sets.} Each score is the mean of z-scored rank-percentile-transformed sample expression across the listed MSigDB v2024.1.Hs component gene sets. Gene-set names are from Hallmark unless prefixed with \texttt{REACTOME} or \texttt{KEGG\_MEDICUS}.}
+\label{tab:pathways}
+\small
+\begin{tabularx}{\textwidth}{lcX}
+\toprule
+\textbf{Pathway score} & \textbf{Components} & \textbf{Constituent gene sets} \\
+\midrule
+Hormone & 3 & ESTROGEN\_RESPONSE\_EARLY; ESTROGEN\_RESPONSE\_LATE; ANDROGEN\_RESPONSE \\
+Proliferation & 5 & E2F\_TARGETS; G2M\_CHECKPOINT; MYC\_TARGETS\_V1; MYC\_TARGETS\_V2; MITOTIC\_SPINDLE \\
+Immune & 5 & INTERFERON\_GAMMA\_RESPONSE; INTERFERON\_ALPHA\_RESPONSE; INFLAMMATORY\_RESPONSE; ALLOGRAFT\_REJECTION; COMPLEMENT \\
+DNA\_Repair & 6 & DNA\_REPAIR; REACTOME\_HDR\_HOMOLOGOUS\_RECOMBINATION; REACTOME\_NUCLEOTIDE\_EXCISION\_REPAIR; REACTOME\_MISMATCH\_REPAIR; KEGG\_MEDICUS\_HOMOLOGOUS\_RECOMBINATION; KEGG\_MEDICUS\_MISMATCH\_REPAIR \\
+Metabolism & 4 & OXIDATIVE\_PHOSPHORYLATION; GLYCOLYSIS; FATTY\_ACID\_METABOLISM; KEGG\_MEDICUS\_GLYCOLYSIS \\
+Stromal\_EMT & 3 & EPITHELIAL\_MESENCHYMAL\_TRANSITION; ANGIOGENESIS; HEDGEHOG\_SIGNALING \\
+Apoptosis\_Stress & 3 & APOPTOSIS; P53\_PATHWAY; HYPOXIA \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\caption{\textbf{External validation: per-cohort Harrell's C-index for the locked Gradient-Boosted Survival model versus the official PAM50-ROR comparator.} All models trained on TCGA-BRCA alone and applied without refitting to external cohorts. CI, 95\% bootstrap confidence interval; GBSA, Gradient-Boosted Survival Analysis. METABRIC denominator note: of the 1,980 patient-characteristics-evaluable samples, one sample with non-positive overall survival time is excluded from C-index calculations but retained in patient-characteristics summary statistics in Table~\ref{tab:characteristics}; events reported in Table~\ref{tab:headtohead} ($n = 1{,}143$) are those contributing to C-index, while events in the patient-characteristics summary in Table~\ref{tab:characteristics} ($n = 1{,}144$) include the excluded sample.}
+\label{tab:headtohead}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabularx}{\textwidth}{lXXXX}
+\toprule
+\textbf{Cohort} & \textbf{$n$ / events} & \textbf{GBSA C (95\% CI)} & \textbf{PAM50-ROR C (95\% CI)} & \textbf{$\Delta$C (95\% CI)} \\
+\midrule
+TCGA-BRCA (training) & 213 / 132 & 0.673 (0.628 to 0.719) & 0.504 (0.444 to 0.557) & $+0.169$ ($+0.092$ to $+0.253$) \\
+GSE96058 & 1,483 / 322 & 0.663 (0.633 to 0.691) & 0.633 (0.603 to 0.662) & $+0.030$ ($-0.011$ to $+0.067$) \\
+METABRIC & 1,980 / 1,143 & 0.555 (0.540 to 0.570) & 0.595 (0.578 to 0.612) & $-0.040$ ($-0.063$ to $-0.018$) \\
+GSE20685 & 327 / 83 & 0.565 (0.515 to 0.617) & 0.635 (0.566 to 0.693) & $-0.070$ ($-0.154$ to $+0.020$) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\caption{\textbf{Pre-registered TNBC primary endpoint: random-effects (DerSimonian-Laird) meta-analysis of $\Delta$C-index, locked model versus PAM50-ROR-official.} Pre-registered threshold: $\Delta$C $\geq +0.03$ at $p < 0.05$. \textbf{Endpoint status: not met.} $I^2 = 10.5\%$; $\tau^2 < 0.001$.}
+\label{tab:tnbc}
+\small
+\begin{tabularx}{\textwidth}{lXXX}
+\toprule
+\textbf{Cohort} & \textbf{TNBC $n$ / events} & \textbf{$\Delta$C (95\% CI)} & \textbf{p-value} \\
+\midrule
+GSE96058 & 55 / 27 & $+0.030$ ($-0.131$ to $+0.195$) & 0.729 \\
+METABRIC & 320 / 168 & $-0.010$ ($-0.070$ to $+0.051$) & 0.744 \\
+TCGA-BRCA & 33 / 19 & $+0.111$ ($-0.027$ to $+0.272$) & 0.151 \\
+\textbf{Meta (3 cohorts)} & \textbf{408 / 214} & \textbf{$+0.0144$ ($-0.0472$ to $+0.0760$)} & \textbf{0.6466} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\caption{\textbf{Five-year calibration summary.} ICI, Integrated Calibration Index (lower indicates better-calibrated predictions). A slope of 1 and intercept of 0 indicate perfect calibration. Full 5-year and 10-year tables in Supplementary Table~S10.}
+\label{tab:calibration}
+\small
+\begin{tabularx}{\textwidth}{lXXXX}
+\toprule
+\textbf{Cohort} & \textbf{ML (GBSA) ICI} & \textbf{ML Slope} & \textbf{PAM50-ROR ICI} & \textbf{PAM50-ROR Slope} \\
+\midrule
+TCGA-BRCA & 0.073 & 1.27 & 0.145 & 0.01 \\
+GSE96058 & 0.155 & 1.20 & 0.137 & 1.47 \\
+METABRIC & 0.111 & 0.55 & 0.131 & 2.40 \\
+GSE20685 & 0.161 & 0.83 & 0.206 & 0.31 \\
+\textbf{Mean} & \textbf{0.125} &  & 0.155 &  \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\caption{\textbf{Feature-ablation and incremental-value analysis: mean external Harrell's C-index across GSE96058, METABRIC, and GSE20685.} All feature sets were trained on TCGA-BRCA alone under the locked protocol and applied without refitting to each external cohort. The clinical-feature set comprises age at diagnosis and ordinal disease stage (the two clinical covariates available across cohorts, with ordinal disease stage reported where available); these two features are also used in the locked primary model. Full per-cohort numbers including Uno's C, 5-year Brier score, 5-year ICI, and paired-bootstrap p-values are in Supplementary Table~S5.}
+\label{tab:ablation}
+\small
+\begin{tabularx}{\textwidth}{lXX}
+\toprule
+\textbf{Feature set (number of features)} & \textbf{Mean external C} & \textbf{Mean $\Delta$C vs PAM50-ROR only} \\
+\midrule
+PAM50-ROR only (1) & (reference) & 0 \\
+Clinical only (2) & 0.574 & $-0.047$ \\
+Pathway only (7) & 0.516 & $-0.105$ \\
+\textbf{Pathway + Clinical (9)} & \textbf{0.594} & \textbf{$-0.027$} \\
+Pathway + Clinical, Hormone removed (8) & 0.548 & $-0.073$ \\
+Single pathway: Proliferation only (1) & 0.470 & $-0.151$ \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ============================================================
+% FIGURES
+% ============================================================
+
+\clearpage
+\section*{Figures}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{fig_cohort_flow.pdf}
+\caption{Patient-flow diagram in the CONSORT style. Inclusion and exclusion accounting for each of the four publicly available breast cancer cohorts at each harmonization step. Final harmonized $N = 4{,}532$; $N = 4{,}003$ evaluable in the official PAM50-ROR head-to-head analysis.}
+\label{fig:flow}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{fig_main_forest.pdf}
+\caption{Pre-registered primary endpoint forest plot. Cohort-level and random-effects meta-analyzed $\Delta$C-index of the locked Gradient-Boosted Survival model versus official PAM50-ROR in TNBC. The pre-registered superiority margin ($+0.03$) is marked. Meta-analyzed TNBC $\Delta$C $= +0.0144$ (95\% CI $-0.0472$ to $+0.0760$, $p = 0.6466$). Endpoint not met.}
+\label{fig:forest}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{fig_within_subtype_forest.pdf}
+\caption{Within-subtype forest plot. Cohort-level and random-effects meta-analyzed $\Delta$C-index of the locked model versus PAM50-ROR within each PAM50 intrinsic subtype. No subtype shows a statistically significant or consistently directional advantage for the locked model.}
+\label{fig:subtype}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{fig_calibration_plots.pdf}
+\caption{Five-year and 10-year calibration curves per cohort. Observed versus predicted survival probabilities for the locked model, the Cox baseline, and PAM50-ROR-official. The dashed line indicates perfect calibration. Mean 5-year ICI: locked model 0.125, PAM50-ROR 0.155.}
+\label{fig:calibration}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{fig_dca_per_cohort.pdf}
+\caption{Decision curve analysis per cohort at a 5-year horizon. Net benefit at threshold probabilities from 0.05 to 0.50. Mean change in net benefit favouring the locked model is $+0.016$ across cohorts and thresholds.}
+\label{fig:dca}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{fig_stability_heatmap.pdf}
+\caption{Permutation-importance rank stability across 100 TCGA 80\% stratified subsamples without replacement, stratified on event status. Left panel: feature rank by subsample. Right panel: marginal mean rank. Three features were consistently top-3 ranked across subsamples (top-3 frequencies in parentheses): Pathway-Hormone (92\%), age at diagnosis (75\%), and Pathway-DNA-Repair (62\%). Mean pairwise Spearman $\rho = 0.395$.}
+\label{fig:stability}
+\end{figure}
+
+% ============================================================
+% REFERENCES
+% ============================================================
+
+\clearpage
+\bibliographystyle{unsrt}
+\bibliography{main}
+
+\end{document}
