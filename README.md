@@ -47,7 +47,14 @@ docs/             Pre-registration endpoint, story lock, cohort notes
 
 ## Manuscript LaTeX
 
-The repository includes a reviewer-facing LaTeX manuscript source at `paper/main.tex` and a DOI-backed BibTeX bibliography at `paper/main.bib`. The LaTeX source mirrors the submitted competitive-not-superior framing and is intended for traceability, not as a claim that the manuscript source is the journal's copyedited version.
+The repository includes a reviewer-facing LaTeX manuscript source at `paper/main.tex`, a DOI-backed BibTeX bibliography at `paper/main.bib`, a compiled PDF at `paper/main.pdf`, and a Word export at `paper/main.docx`. The LaTeX source mirrors the submitted competitive-not-superior framing and is intended for traceability, not as a claim that the manuscript source is the journal's copyedited version.
+
+Build commands:
+
+```bash
+cd paper && tectonic --keep-logs main.tex
+cd .. && python3 scripts/build_manuscript_docx.py
+```
 
 ## Data Sources
 

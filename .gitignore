@@ -18,6 +18,8 @@ __pycache__/
 *$py.class
 *.egg-info/
 *.so
+.pytest_cache/
+.ruff_cache/
 
 # Jupyter
 .ipynb_checkpoints/
@@ -33,6 +35,7 @@ env/
 
 # Archives
 figures/archive/
+build/
 
 # R artifacts
 .Rhistory
@@ -43,3 +46,15 @@ figures/archive/
 models/*.pkl
 models/*.joblib
 models/*.pt
+
+# LaTeX build artifacts
+paper/*.aux
+paper/*.bbl
+paper/*.bcf
+paper/*.blg
+paper/*.fdb_latexmk
+paper/*.fls
+paper/*.log
+paper/*.out
+paper/*.run.xml
+paper/*.synctex.gz

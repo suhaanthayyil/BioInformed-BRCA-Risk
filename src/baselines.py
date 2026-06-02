@@ -240,7 +240,8 @@ def pam50_ror_surrogate(
     note = (
         "PAM50-ROR surrogate, not official ROR-S/ROR-P/ROR-PT; "
         + ", ".join(pieces)
-        + ". Official genefu reproduction should replace this if package scoring succeeds."
+        + ". Official genefu PAM50-ROR is the primary comparator; this surrogate "
+        + "is retained only for historical comparison."
     )
     return ScoreResult(scaled, "PAM50_ROR_surrogate", "published_subtype_plus_proliferation", status, note)
 

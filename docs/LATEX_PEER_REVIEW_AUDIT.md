@@ -23,7 +23,7 @@ Current status: resolved for the active repository. `paper/main.tex` was recreat
 
 Earlier audit finding: historical bibliography had no inline `\cite{}` usage and no DOI fields.
 
-Current status: resolved. `paper/main.tex` uses BibTeX `\cite{...}` calls, and `paper/main.bib` contains DOI fields for all 28 cited references.
+Current status: resolved. `paper/main.tex` uses BibTeX `\cite{...}` calls, and `paper/main.bib` contains DOI fields plus LaTeX-printable DOI URL notes for all 28 cited references.
 
 Earlier audit finding: `results/Table_S1_clinical_baselines.tex` contained raw underscores that could break LaTeX compilation.
 
@@ -55,7 +55,8 @@ Compile checks:
 - `tectonic --keep-logs main.tex` completed successfully from `paper/`.
 - `paper/main.pdf` was produced with resolved citations and no LaTeX errors.
 - Remaining TeX warnings are layout warnings from long table/pathway labels, not missing citations, missing figures, or fatal compilation problems.
-- `pandoc paper/main.tex --bibliography=paper/main.bib --citeproc -o paper/main.docx` produced `paper/main.docx`.
+- The compiled PDF bibliography visibly prints DOI URLs.
+- `python3 scripts/build_manuscript_docx.py` produced `paper/main.docx` from `paper/main.tex` and `paper/main.bib`.
 - The DOCX was rendered through LibreOffice using `render_docx.py`; the title block, table-heavy pages, and reference pages were visually spot-checked.
 
 ## Corrected Model Configuration Text
@@ -105,7 +106,7 @@ The fixed LaTeX does not claim that the model beats, outperforms, or is superior
 
 ## Bibliography Checks
 
-`paper/main.bib` includes DOI fields for all 28 references. Key DOI checks:
+`paper/main.bib` includes DOI fields for all 28 references. Each entry also includes a LaTeX `note` with the DOI URL so standard BibTeX output prints a visible DOI link in `paper/main.pdf`. Crossref metadata lookup returned HTTP 200 for all 28 DOI records on 2026-06-02. Key DOI checks:
 
 - Parker 2009 PAM50: `10.1200/JCO.2008.18.1370`
 - Perou 2000 molecular portraits: `10.1038/35021093`
