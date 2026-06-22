@@ -63,3 +63,6 @@ paper/*.synctex.gz
 
 # Runtime logs
 logs/
+
+# Local submission materials (private; not for public GitHub)
+_submission/
