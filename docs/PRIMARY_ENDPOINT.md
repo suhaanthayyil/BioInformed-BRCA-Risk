@@ -19,3 +19,20 @@
 **Pre-registration timestamp**: 2026-05-16T11:10:43-04:00
 
 **Modifications after analysis begins**: NOT PERMITTED.
+
+## Locked-artifact manifest
+
+The trained weights that produced the locked external-validation results are
+committed under `models/` and fingerprinted in `docs/MODEL_SHA256.txt`
+(`shasum -a 256 -c docs/MODEL_SHA256.txt`). The headline model is
+`gradient_boosted_survival.pkl`; its features, training cohort (TCGA-BRCA,
+n = 213), seed (42), and selected configuration are recorded in
+`models/README.md` and `data/processed/ml_model_zoo.metadata.json`. This lets a
+reviewer confirm the scored weights were not altered after the endpoint lock.
+
+**Timeline note.** This pre-registration text was committed at
+`7783f4f0bfaaa6bdc611c78d33ccda621c6b243d`, before any results commits. The
+internal pre-registration timestamp above (2026-05-16) precedes the first
+public Git commit date (2026-05-17) because the endpoint was fixed locally
+before the repository history was published; the ordering of the lock relative
+to results is preserved in the Git history.

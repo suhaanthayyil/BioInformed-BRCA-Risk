@@ -79,9 +79,8 @@ def verify_cold(name: str) -> bool:
     import subprocess
 
     code = (
-        "import sys, pickle; sys.path.insert(0, r'%s'); "
-        "pickle.load(open(r'%s','rb')); print('ok')"
-        % (str(REPO_ROOT), str(MODELS / name))
+        f"import sys, pickle; sys.path.insert(0, r'{REPO_ROOT}'); "
+        f"pickle.load(open(r'{MODELS / name}','rb')); print('ok')"
     )
     result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
     return result.returncode == 0 and "ok" in result.stdout

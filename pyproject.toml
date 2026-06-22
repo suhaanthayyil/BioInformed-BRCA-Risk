@@ -1,0 +1,41 @@
+# Tooling configuration for BRCA-PathwayML.
+#
+# This is intentionally NOT a packaging manifest: the repo is a research
+# analysis project run via scripts/ + the Makefile, not a pip-installable
+# package, so there is no [build-system]/[project] section. Dependencies are
+# pinned in requirements.txt; tool settings live here so ruff/mypy/pytest pick
+# them up automatically.
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# Mirror ruff's defaults (pyflakes F + pycodestyle E/W), which the committed
+# code already passes. Kept deliberately narrow so this revision's CI stays
+# green without reformatting unrelated legacy files; the scripts use an
+# intentional sys.path.insert(...) before imports, guarded with `noqa: E402`.
+select = ["E", "F", "W"]
+ignore = [
+    "E501",  # long lines (many tabular f-strings); line-length set above
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests intentionally import after a sys.path.insert and use bare asserts.
+"tests/*" = ["E402"]
+"conftest.py" = ["E402"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+# Non-strict: this is scientific code with many dynamically-typed dataframes.
+warn_unused_ignores = false
+warn_return_any = false
+check_untyped_defs = false
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+markers = [
+    "requires_r: test requires an R installation with the genefu package (PAM50-ROR); auto-skipped when absent",
+]
