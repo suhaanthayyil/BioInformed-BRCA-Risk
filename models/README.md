@@ -60,5 +60,5 @@ reproduction.
 ## Not shipped
 
 `rescue_headline.pkl` is **intentionally excluded** (gitignored). It is a
-post-hoc rescue exploration that `docs/STORY.md` documents as over-fit; it is
+post-hoc rescue exploration that is over-fit; it is
 not a result of the manuscript and must not be used as a prognostic model.

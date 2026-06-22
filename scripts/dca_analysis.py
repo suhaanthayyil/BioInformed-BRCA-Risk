@@ -220,6 +220,8 @@ def plot_dca(dca: pd.DataFrame) -> None:
 
 def update_story(dca: pd.DataFrame) -> None:
     story = REPO_ROOT / "docs" / "STORY.md"
+    if not story.exists():
+        return  # STORY.md was removed from the repo; nothing to update
     text = story.read_text()
     wide = dca.pivot_table(index=["cohort", "threshold"], columns="strategy", values="net_benefit")
     if {"Pathway ML", "PAM50-ROR"}.issubset(wide.columns):

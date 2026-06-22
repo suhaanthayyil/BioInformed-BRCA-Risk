@@ -48,7 +48,6 @@ The expanded feature/model rescue improved TCGA internal performance but did not
 - `results/Table_S6_rescue_head_to_head.csv`
 - `results/Table_S7_rescue_posthoc_top_candidate_screen.csv`
 - `results/reports/rescue_analysis_qc.md`
-- `docs/rescue_results_summary.md`
 - `data/processed/rescue_analysis.metadata.json`
 - `data/processed/rescue_primary_endpoint.json`
 

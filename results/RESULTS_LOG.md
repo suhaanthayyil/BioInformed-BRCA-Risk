@@ -1,8 +1,6 @@
 # Results Log
 
-## Submitted Manuscript Crosswalk
-
-The submitted BMC Artificial Intelligence manuscript is mapped to repository source files in `docs/SUBMITTED_MANUSCRIPT_REPOSITORY_CROSSWALK.md`.
+## Reproducibility traceability
 
 Additional traceability files:
 

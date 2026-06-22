@@ -197,5 +197,4 @@ subgroup), `primary_site`, `treatment_summary` (all AUX unless noted).
 Sample counts entering the official PAM50-ROR head-to-head and patient-
 characteristics analyses differ from these scoring counts because of metric-
 evaluability filters (non-positive survival time, model-specific missingness);
-see `results/Table_1_denominator_crosswalk.csv` and
-`docs/SUBMITTED_MANUSCRIPT_REPOSITORY_CROSSWALK.md`.
+see `results/Table_1_denominator_crosswalk.csv`.

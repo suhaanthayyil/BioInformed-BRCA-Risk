@@ -132,6 +132,8 @@ def plot_heatmap(rank_matrix: np.ndarray, features: list[str]) -> None:
 
 def update_story(summary: pd.DataFrame) -> None:
     story = REPO_ROOT / "docs" / "STORY.md"
+    if not story.exists():
+        return  # STORY.md was removed from the repo; nothing to update
     text = story.read_text()
     mean_rho = float(summary["mean_pairwise_spearman"].iloc[0]) if not summary.empty else np.nan
     low = float(summary["spearman_ci_low"].iloc[0]) if not summary.empty else np.nan

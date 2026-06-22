@@ -12,8 +12,6 @@ This repository contains the code, analysis pipelines, and results for a four-co
 
 The pre-registered primary endpoint (TNBC meta-analyzed delta C-index >= +0.03, p < 0.05) was **not met**. The observed result was delta = +0.0144, 95% CI [-0.0472, +0.0760], p = 0.6466. All secondary analyses are exploratory.
 
-**Revision 1 (BMC Artificial Intelligence):** see `docs/RESPONSE_TO_REVIEWERS.md` for the point-by-point reviewer mapping and `CHANGELOG.md` for what changed. Release: [`v1.1.0`](https://github.com/suhaanthayyil/BioInformed-BRCA-Risk/releases/tag/v1.1.0).
-
 ## Key Results
 
 - **Harmonized database:** 4,532 samples across four cohorts (TCGA-BRCA, GSE96058/SCAN-B, METABRIC, GSE20685).
@@ -22,11 +20,9 @@ The pre-registered primary endpoint (TNBC meta-analyzed delta C-index >= +0.03, 
 - **TNBC primary endpoint:** NOT MET (meta delta = +0.0144, p = 0.6466).
 - **Overall discrimination:** comparable to PAM50-ROR across external cohorts.
 
-## Submitted Manuscript Crosswalk
+## Reproducibility traceability
 
-The submitted BMC Artificial Intelligence manuscript is mapped to repository files in `docs/SUBMITTED_MANUSCRIPT_REPOSITORY_CROSSWALK.md`.
-
-Reviewer-facing traceability helpers:
+Helpers for verifying the central reported values:
 
 - `scripts/check_submission_consistency.py` verifies the central submitted values against repository CSV/JSON outputs.
 - `results/Table_S2_internal_cv_manuscript_crosswalk.csv` maps internal cross-validation values between the manuscript summary and exact reproducible output.
@@ -50,8 +46,8 @@ data/             Raw, processed, and clinical data (committed intermediates +
                   download/regeneration scripts; large raw expression not redistributed)
 models/           Trained model artifacts (committed; see models/README.md + SHA256)
 tests/            Pytest suite (incl. recompute smoke + primary-endpoint tests)
-docs/             Pre-registration, crosswalk, data dictionary/use, harmonization,
-                  hyperparameters, response-to-reviewers
+docs/             Pre-registration endpoint, cohort notes, data dictionary/use,
+                  harmonization, hyperparameters, model SHA256 manifest
 Makefile, Dockerfile, .github/workflows/ci.yml, pyproject.toml   reproducibility infra
 ```
 
@@ -70,7 +66,7 @@ Pipeline (in order): `harmonize_cohorts.py` -> `score_pathways.py` ->
 weight and score), `migrate_pickles.py` (make pickles load cold),
 `check_submission_consistency.py` (recompute-vs-committed gate),
 `build_manuscript_docx.py`. `run_rescue_analysis.py` / `screen_rescue_top_candidates.py`
-are exploratory rescue analyses (over-fit; not a result claim -- see `docs/STORY.md`).
+are exploratory rescue analyses (over-fit; not a result claim).
 
 ## Manuscript
 

@@ -43,7 +43,7 @@ build/
 .Rproj.user/
 
 # Models: trained weights ARE shipped for reproducibility (editor requirement E3).
-# Exclude only the disavowed rescue model (over-fit, see docs/STORY.md) and
+# Exclude only the disavowed rescue model (over-fit, post-hoc rescue exploration) and
 # the one-time migration backups produced by scripts/migrate_pickles.py.
 models/_pre_migration/
 models/rescue_headline.pkl

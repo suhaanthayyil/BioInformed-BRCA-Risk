@@ -206,6 +206,8 @@ def plot_forest(table: pd.DataFrame, meta_table: pd.DataFrame) -> None:
 
 def update_story(meta_table: pd.DataFrame) -> None:
     story = REPO_ROOT / "docs" / "STORY.md"
+    if not story.exists():
+        return  # STORY.md was removed from the repo; nothing to update
     text = story.read_text()
     if meta_table.empty or not meta_table["verdict"].eq("positive_signal").any():
         verdict = "comparable, with no consistent within-subtype advantage over PAM50-ROR."

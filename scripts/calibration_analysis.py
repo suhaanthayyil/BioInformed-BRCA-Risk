@@ -165,6 +165,8 @@ def plot_calibration(curves: dict[tuple[str, int, str], pd.DataFrame]) -> None:
 
 def update_story(table: pd.DataFrame) -> None:
     story = REPO_ROOT / "docs" / "STORY.md"
+    if not story.exists():
+        return  # STORY.md was removed from the repo; nothing to update
     text = story.read_text()
     mean_ici = table.groupby("model")["ici"].mean(numeric_only=True)
     if HEADLINE_MODEL in mean_ici and PAM50_MODEL in mean_ici:
