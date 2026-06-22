@@ -26,7 +26,7 @@ from scripts.phase3_common import (  # noqa: E402
 )
 from src.meta import random_effects_from_ci  # noqa: E402
 
-LOCKED_TNBC = {"delta": 0.0144, "ci_low": -0.0472, "ci_high": 0.0760, "p": 0.6466}
+LOCKED_TNBC = {"delta": 0.0144, "ci_low": -0.0472, "ci_high": 0.0760, "p": 0.6466, "i2": 0.1053, "tau2": 0.00045}
 
 
 def subset_rows(table: pd.DataFrame, subgroup: str) -> tuple[pd.DataFrame, dict]:
@@ -43,8 +43,8 @@ def subset_rows(table: pd.DataFrame, subgroup: str) -> tuple[pd.DataFrame, dict]
             "ci_low": LOCKED_TNBC["ci_low"],
             "ci_high": LOCKED_TNBC["ci_high"],
             "p": LOCKED_TNBC["p"],
-            "i2": np.nan,
-            "tau2": np.nan,
+            "i2": LOCKED_TNBC["i2"],
+            "tau2": LOCKED_TNBC["tau2"],
         }
     else:
         meta = random_effects_from_ci(rows, "delta_vs_pam50", "delta_ci_low", "delta_ci_high")
