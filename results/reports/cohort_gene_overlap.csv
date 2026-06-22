@@ -1,0 +1,5 @@
+cohort,expression_platform,expression_gene_rows,n_samples_retained,n_pathway_sets_scored,mean_gene_coverage,min_gene_coverage,normalization
+GSE20685,Affymetrix HG-U133 Plus 2.0 (GPL570),22189,327,344,0.9436,0.1061,within-cohort z-score of pathway-set scores; model scaler fit on TCGA-BRCA only
+GSE96058,RNA-seq (GEO transformed),30865,1483,347,0.964,0.1061,within-cohort z-score of pathway-set scores; model scaler fit on TCGA-BRCA only
+METABRIC,Illumina microarray (cBioPortal z-scores vs diploid),20603,1981,347,0.9845,0.3488,within-cohort z-score of pathway-set scores; model scaler fit on TCGA-BRCA only
+TCGA-BRCA,"RNA-seq (GDC, log2 RSEM-normalized)",see GDC,213,345,0.9468,0.1061,within-cohort z-score of pathway-set scores; model scaler fit on TCGA-BRCA only
