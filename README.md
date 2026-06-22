@@ -12,6 +12,8 @@ This repository contains the code, analysis pipelines, and results for a four-co
 
 The pre-registered primary endpoint (TNBC meta-analyzed delta C-index >= +0.03, p < 0.05) was **not met**. The observed result was delta = +0.0144, 95% CI [-0.0472, +0.0760], p = 0.6466. All secondary analyses are exploratory.
 
+**Revision 1 (BMC Artificial Intelligence):** see `docs/RESPONSE_TO_REVIEWERS.md` for the point-by-point reviewer mapping and `CHANGELOG.md` for what changed. Release: [`v1.1.0`](https://github.com/suhaanthayyil/BioInformed-BRCA-Risk/releases/tag/v1.1.0).
+
 ## Key Results
 
 - **Harmonized database:** 4,532 samples across four cohorts (TCGA-BRCA, GSE96058/SCAN-B, METABRIC, GSE20685).
@@ -113,7 +115,7 @@ make all                  # Tier-1: train -> external_validation -> phase3 -> fi
 Load a committed weight directly:
 
 ```bash
-python scripts/predict.py --from-features data/processed/04_pathway_features.parquet --cohort TCGA-BRCA
+python3 scripts/predict.py --from-features data/processed/04_pathway_features.parquet --cohort TCGA-BRCA
 ```
 
 Full pipeline order (Tier-2, needs raw data + R/genefu): `harmonize_cohorts.py`
