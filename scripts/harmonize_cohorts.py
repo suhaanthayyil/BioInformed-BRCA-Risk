@@ -434,7 +434,7 @@ def write_report(summary: dict[str, object]) -> None:
         "",
         "## Normalization Notes",
         "",
-        "- TCGA: existing repo-normalized expression file has no explicit sample ID column; TCGA pathway features remain available in `data/processed/02_tcga_feature_matrix.csv`.",
+        "- TCGA: existing repo-normalized expression file has no explicit sample ID column; `data/processed/02_tcga_feature_matrix.csv` supplies the canonical TCGA sample-ID ordering. The authoritative harmonized pathway features for all cohorts are in `data/processed/04_pathway_features.parquet`.",
         "- GSE96058: GEO transformed RNA-seq expression, gene rows by sample columns.",
         "- METABRIC: cBioPortal z-scores relative to diploid samples; not directly commensurate with RNA-seq expression scale.",
         "- GSE20685: Affymetrix GPL570 processed expression, probe-level values collapsed to gene symbols by mean.",

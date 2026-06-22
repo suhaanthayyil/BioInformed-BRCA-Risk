@@ -5,6 +5,7 @@ Last updated: 2026-05-16T11:16:00-04:00
 ## TCGA-BRCA
 
 - Existing repository files: `data/01_tcga_expression_normalized.csv`, `data/clinical/01_tcga_clinical.csv`, and `data/processed/02_tcga_feature_matrix.csv`.
+- `02_tcga_feature_matrix.csv` provides the canonical TCGA sample-ID ordering used to align the header-less normalized expression file; its pathway columns now mirror the seven authoritative features. The **authoritative model input is `data/processed/04_pathway_features.parquet`** (all four cohorts, the seven harmonized pathways). Earlier revisions of this CSV carried a now-removed gene-level pathway schema.
 - Current usable clinical rows: 213 patients with `time_to_event`, `event_status`, `high_risk`, and published `pam50_subtype` fields.
 - Expression normalization in the v1 repo is already preprocessed/log-normalized; v2 harmonization must not assume that TCGA centering/scaling transfers to external cohorts.
 
