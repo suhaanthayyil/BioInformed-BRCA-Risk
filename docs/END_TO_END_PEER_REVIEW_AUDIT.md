@@ -34,7 +34,7 @@ Build commands verified:
 ```bash
 cd paper && tectonic --keep-logs main.tex
 cd .. && python3 scripts/build_manuscript_docx.py
-env TMPDIR=/private/tmp python render_docx.py paper/main.docx --output_dir build/audit/docx_render --emit_pdf
+soffice --headless --convert-to pdf --outdir build/audit/docx_render paper/main.docx
 pdftotext paper/main.pdf build/audit/pdf_text/main_pdf.txt
 ```
 

@@ -1,4 +1,10 @@
 """
+DEPRECATED (v1 classification pipeline) -- NOT used by the submitted survival
+analysis. The authoritative pathway definition for the manuscript is the MSigDB
+set-level ``SEVEN_PATHWAY_COMPONENTS`` in ``src/pathways.py``; the gene-level
+``PATHWAY_DEFINITIONS`` below is a historical artifact retained only for the
+legacy exploratory notebooks. Do not use for new work.
+
 Feature engineering for pathway-level gene expression scores.
 
 Defines 7 biological pathways (45 genes total) and computes

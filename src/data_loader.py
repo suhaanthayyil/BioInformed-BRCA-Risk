@@ -1,4 +1,9 @@
 """
+DEPRECATED (v1 pipeline) -- NOT used by the submitted survival analysis, which
+loads data via ``scripts/harmonize_cohorts.py`` and the committed
+``data/processed/`` intermediates (DuckDB + parquet). Retained only for the
+legacy exploratory notebooks. Do not use for new work.
+
 Data loading utilities for breast cancer prediction project.
 
 Handles loading of:

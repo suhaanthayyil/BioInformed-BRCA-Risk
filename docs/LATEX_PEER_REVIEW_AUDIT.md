@@ -57,7 +57,7 @@ Compile checks:
 - Remaining TeX warnings are layout warnings from long table/pathway labels, not missing citations, missing figures, or fatal compilation problems.
 - The compiled PDF bibliography visibly prints DOI URLs.
 - `python3 scripts/build_manuscript_docx.py` produced `paper/main.docx` from `paper/main.tex` and `paper/main.bib`.
-- The DOCX was rendered through LibreOffice using `render_docx.py`; the title block, table-heavy pages, and reference pages were visually spot-checked.
+- The DOCX was rendered through LibreOffice (`soffice --headless --convert-to pdf paper/main.docx`); the title block, table-heavy pages, and reference pages were visually spot-checked.
 
 ## Corrected Model Configuration Text
 

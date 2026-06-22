@@ -164,6 +164,22 @@ Pathway-scoring sensitivity:
 
 These analyses support the manuscript's conclusion that no tested sensitivity analysis establishes external superiority over PAM50-ROR.
 
+## Supplementary Table Index
+
+Within-subtype analyses (cited in the main text):
+
+- `results/Table_S8_within_subtype_external.csv` -- per-cohort within-subtype external discrimination (overall vs PAM50-ROR), now labelled `analysis_type=exploratory_secondary`.
+- `results/Table_S9_within_subtype_meta.csv` -- random-effects meta of the within-subtype deltas.
+
+Numbering note: there is no `Table_S3`. Supplementary tables S4-S7 are the
+post-hoc *rescue* analyses (disavowed as over-fit in `docs/STORY.md`); the gap
+at S3 is intentional and is not a missing file.
+
+Revision-1 additions (BMC Artificial Intelligence major revision):
+
+- `results/Table_S16_metabric_recurrence_sensitivity.csv` -- locked GBSA vs official PAM50-ROR on the METABRIC DFS/recurrence endpoint (reviewers R2.1/R3.1).
+- `results/Table_S17_learning_curve.csv` and `results/Table_S17_train_cohort_crosscheck.csv` -- training-size sensitivity and train-on-each-cohort cross-check (reviewers R1.2/R2.2/R3.2).
+
 ## Clinical Covariate Availability
 
 The model feature schema contains age and ordinal stage. Age is available for nearly all included samples. Stage is stored as a harmonized field where source cohorts provide it and is handled by the preprocessing imputer where missing.

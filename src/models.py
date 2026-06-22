@@ -1,4 +1,9 @@
 """
+DEPRECATED (v1 binary-classification pipeline) -- NOT used by the submitted
+survival analysis. The manuscript's survival model zoo lives in
+``scripts/train_ml_zoo.py`` with wrappers in ``src/ml/wrappers.py``. Retained
+only for the legacy exploratory notebooks. Do not use for new work.
+
 Model definitions and evaluation pipelines.
 
 Implements three classifiers (Elastic Net, Random Forest, Gradient Boosting)

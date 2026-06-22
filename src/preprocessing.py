@@ -1,4 +1,9 @@
 """
+DEPRECATED (v1 pipeline) -- NOT used by the submitted survival analysis, whose
+preprocessing is the train-fit ``SimpleImputer`` + ``StandardScaler`` pipeline
+serialized inside each model artifact (see ``scripts/train_ml_zoo.py``).
+Retained only for the legacy exploratory notebooks. Do not use for new work.
+
 Preprocessing utilities for gene expression and clinical data.
 
 Includes z-score normalization, clinical feature encoding,
