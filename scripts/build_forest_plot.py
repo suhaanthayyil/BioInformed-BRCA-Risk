@@ -51,7 +51,14 @@ def subset_rows(table: pd.DataFrame, subgroup: str) -> tuple[pd.DataFrame, dict]
     return rows, meta
 
 
-def draw_panel(ax, rows: pd.DataFrame, meta: dict, title: str, primary_note: str | None = None) -> None:
+def draw_panel(
+    ax,
+    rows: pd.DataFrame,
+    meta: dict,
+    title: str,
+    primary_note: str | None = None,
+    n_overrides: dict[str, int] | None = None,
+) -> None:
     # Plot only evaluable cohorts (drop rows without a computable delta/CI, e.g.
     # GSE20685 in the TNBC panel, which lacks receptor-status annotation).
     rows = rows.dropna(subset=["delta_vs_pam50", "delta_ci_low", "delta_ci_high"]).sort_values("cohort")
@@ -68,7 +75,11 @@ def draw_panel(ax, rows: pd.DataFrame, meta: dict, title: str, primary_note: str
         x, low, high = row["delta_vs_pam50"], row["delta_ci_low"], row["delta_ci_high"]
         ax.errorbar(x, y, xerr=[[x - low], [high - x]], fmt="o", color="#31688e", capsize=3)
         events = int(row["events"]) if "events" in row and np.isfinite(row["events"]) else 0
-        ax.text(label_x, y, f"{row['cohort']} (n={int(row['n'])}, e={events})", ha="left", va="center", fontsize=8)
+        # Display the C-index-evaluable n. In METABRIC TNBC one sample with a
+        # non-positive survival time is not evaluable for the C-index, so the
+        # analysed count (319) is one below the characteristics count (320).
+        n_disp = (n_overrides or {}).get(row["cohort"], int(row["n"]))
+        ax.text(label_x, y, f"{row['cohort']} (n={n_disp}, e={events})", ha="left", va="center", fontsize=8)
         ax.text(value_x, y, f"{x:+.3f} [{low:+.3f}, {high:+.3f}]", ha="right", va="center", fontsize=8)
     total_events = int(rows["events"].fillna(0).sum()) if "events" in rows else 0
     effect, low, high = meta["effect"], meta["ci_low"], meta["ci_high"]
@@ -103,16 +114,20 @@ def main() -> None:
     overall_rows, overall_meta = subset_rows(table, "overall")
     tnbc_rows, tnbc_meta = subset_rows(table, "tnbc")
     fig, axes = plt.subplots(1, 2, figsize=(13, 4.8))
-    draw_panel(axes[0], overall_rows, overall_meta, "A. Overall cohort")
+    # METABRIC overall: one sample with a non-positive survival time is excluded
+    # from the C-index, so the analysed n is 1,979 (matches Table 3), not 1,980.
+    draw_panel(axes[0], overall_rows, overall_meta, "A. Overall cohort", n_overrides={"METABRIC": 1979})
     draw_panel(
         axes[1],
         tnbc_rows,
         tnbc_meta,
         "B. TNBC subgroup",
         "Pre-registered primary endpoint. Result: NOT MET.\nGSE20685 lacked receptor status and is not evaluable for TNBC.",
+        n_overrides={"METABRIC": 319},
     )
     fig.tight_layout()
     fig.savefig(FIGURES / "fig_main_forest.pdf")
+    fig.savefig(FIGURES / "fig_main_forest.png", dpi=200)
     fig.savefig(FIGURES / "fig_main_forest.tiff", dpi=300)
     plt.close(fig)
     log_phase3("Stage 8 main forest plot completed.")
