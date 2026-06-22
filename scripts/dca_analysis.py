@@ -240,6 +240,7 @@ def main() -> None:
     probs = probability_table()
     dca = run_dca(probs)
     nri_idi = run_nri_idi(probs)
+    dca["analysis_type"] = "exploratory_secondary"  # secondary metric; not the primary endpoint
     dca.to_csv(RESULTS / "Table_S11_dca.csv", index=False)
     nri_idi.to_csv(RESULTS / "Table_S12_nri_idi.csv", index=False)
     plot_dca(dca)

@@ -59,14 +59,16 @@ def draw_panel(ax, rows: pd.DataFrame, meta: dict, title: str, primary_note: str
         low = row["delta_ci_low"]
         high = row["delta_ci_high"]
         ax.errorbar(x, y, xerr=[[x - low], [high - x]], fmt="o", color="#31688e", capsize=3)
-        ax.text(-0.185, y, f"{row['cohort']} (n={int(row['n'])})", ha="left", va="center", fontsize=8)
+        events = int(row["events"]) if "events" in row and np.isfinite(row["events"]) else 0
+        ax.text(-0.185, y, f"{row['cohort']} (n={int(row['n'])}, e={events})", ha="left", va="center", fontsize=8)
         ax.text(0.185, y, f"{x:+.3f} [{low:+.3f}, {high:+.3f}]", ha="right", va="center", fontsize=8)
+    total_events = int(rows["events"].fillna(0).sum()) if "events" in rows else 0
     meta_y = 0
     effect = meta["effect"]
     low = meta["ci_low"]
     high = meta["ci_high"]
     ax.errorbar(effect, meta_y, xerr=[[effect - low], [high - effect]], fmt="D", color="#440154", capsize=4)
-    ax.text(-0.185, meta_y, "Random-effects meta", ha="left", va="center", fontsize=8, fontweight="bold")
+    ax.text(-0.185, meta_y, f"Pooled (random-effects, e={total_events})", ha="left", va="center", fontsize=8, fontweight="bold")
     ax.text(0.185, meta_y, f"{effect:+.3f} [{low:+.3f}, {high:+.3f}]", ha="right", va="center", fontsize=8)
     ax.axvline(0, color="black", lw=1)
     ax.set_xlim(-0.20, 0.20)

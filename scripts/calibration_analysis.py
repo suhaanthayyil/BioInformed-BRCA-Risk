@@ -182,6 +182,7 @@ def main() -> None:
     ensure_dirs()
     log_phase3("Stage 3 calibration analysis started.")
     table, curves = run_analysis()
+    table["analysis_type"] = "exploratory_secondary"  # secondary metric; not the primary endpoint
     table.to_csv(RESULTS / "Table_S10_calibration.csv", index=False)
     plot_calibration(curves)
     update_story(table)

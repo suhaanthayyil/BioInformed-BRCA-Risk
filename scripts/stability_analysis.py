@@ -148,6 +148,10 @@ def main() -> None:
     ensure_dirs()
     log_phase3("Stage 5 stability analysis started.")
     summary, importance, rank_matrix = run_analysis()
+    # R1.6/R3.4: these rankings are descriptive signals from this modelling setup,
+    # not mechanistic biological conclusions. Mark it on the artifact itself.
+    summary["interpretation"] = "descriptive_signal_not_mechanistic"
+    importance["interpretation"] = "descriptive_signal_not_mechanistic"
     summary.to_csv(RESULTS / "Table_S13_stability.csv", index=False)
     importance.to_csv(RESULTS / "Table_S13_stability_ranks.csv", index=False)
     features = summary["feature"].tolist() if not summary.empty else []

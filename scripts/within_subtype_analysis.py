@@ -174,7 +174,8 @@ def plot_forest(table: pd.DataFrame, meta_table: pd.DataFrame) -> None:
                 color="#31688e",
                 capsize=2,
             )
-            ax.text(-0.30, y, f"{row['cohort']} (n={int(row['n'])})", fontsize=8, va="center")
+            events = int(row["events"]) if "events" in row and pd.notna(row["events"]) else 0
+            ax.text(-0.30, y, f"{row['cohort']} (n={int(row['n'])}, e={events})", fontsize=8, va="center")
             y += 1
         meta = meta_table[meta_table["subtype"].eq(subtype)]
         if not meta.empty:
@@ -219,6 +220,8 @@ def main() -> None:
     ensure_dirs()
     log_phase3("Stage 2 within-subtype analysis started.")
     table, meta_table = run_analysis()
+    table["analysis_type"] = "exploratory_secondary"  # secondary subgroup analysis; not the primary endpoint
+    meta_table["analysis_type"] = "exploratory_secondary"
     table.to_csv(RESULTS / "Table_S8_within_subtype_external.csv", index=False)
     meta_table.to_csv(RESULTS / "Table_S9_within_subtype_meta.csv", index=False)
     plot_forest(table, meta_table)
