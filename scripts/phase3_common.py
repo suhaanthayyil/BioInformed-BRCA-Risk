@@ -17,8 +17,9 @@ from scipy import stats
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.train_ml_zoo import SkSurvAdapter, stage_to_ordinal  # noqa: E402,F401
+from scripts.train_ml_zoo import stage_to_ordinal  # noqa: E402
 from src.meta import random_effects_from_ci  # noqa: E402
+from src.ml.wrappers import SkSurvAdapter  # noqa: E402,F401  (imported so pickled artifacts resolve)
 from src.survival import (  # noqa: E402
     bootstrap_c_index_ci,
     harrell_c_index,
@@ -43,8 +44,10 @@ COX_MODEL = "Cox_PH"
 EXTERNAL_COHORTS = ["GSE96058", "METABRIC", "GSE20685"]
 ALL_COHORTS = ["TCGA-BRCA", "GSE96058", "METABRIC", "GSE20685"]
 
-# Phase 5 pickles were created by running scripts/train_ml_zoo.py as __main__.
-# This alias lets pickle resolve the saved adapter class without touching scores.
+# Backward-compat shim: pre-migration pickles were created by running
+# scripts/train_ml_zoo.py as __main__, so they reference __main__.SkSurvAdapter.
+# Migrated artifacts resolve to src.ml.wrappers directly; this alias keeps any
+# un-migrated legacy pickle loadable. Harmless once migrate_pickles.py has run.
 setattr(__main__, "SkSurvAdapter", SkSurvAdapter)
 
 

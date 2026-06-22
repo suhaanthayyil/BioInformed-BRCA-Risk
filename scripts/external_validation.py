@@ -18,15 +18,14 @@ from lifelines import CoxPHFitter
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.train_ml_zoo import (  # noqa: E402,F401
+from scripts.train_ml_zoo import stage_to_ordinal  # noqa: E402
+from src.meta import random_effects_from_ci  # noqa: E402
+from src.ml.deepsurv import CoxMLP  # noqa: E402
+from src.ml.wrappers import (  # noqa: E402,F401  (imported so pickled artifacts resolve)
     LifelinesCoxWrapper,
     SkSurvAdapter,
     XGBCoxWrapper,
-    feature_columns,
-    stage_to_ordinal,
 )
-from src.meta import random_effects_from_ci  # noqa: E402
-from src.ml.deepsurv import CoxMLP  # noqa: E402
 from src.survival import (  # noqa: E402
     brier_score_at,
     bootstrap_c_index_ci,

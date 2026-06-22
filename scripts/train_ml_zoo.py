@@ -14,7 +14,6 @@ import duckdb
 import numpy as np
 import pandas as pd
 import torch
-import xgboost as xgb
 from lifelines import CoxPHFitter
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import StratifiedKFold
@@ -23,12 +22,16 @@ from sklearn.preprocessing import StandardScaler
 from sksurv.ensemble import GradientBoostingSurvivalAnalysis, RandomSurvivalForest
 from sksurv.linear_model import CoxnetSurvivalAnalysis
 from sksurv.metrics import concordance_index_censored
-from sksurv.util import Surv
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
 from src.ml.deepsurv import DeepSurvConfig, DeepSurvEstimator  # noqa: E402
+from src.ml.wrappers import (  # noqa: E402
+    LifelinesCoxWrapper,
+    SkSurvAdapter,
+    XGBCoxWrapper,
+)
 from src.survival import brier_score_at, time_dependent_auc  # noqa: E402
 
 
@@ -107,57 +110,8 @@ def cindex(time, event, risk) -> float:
     return float(concordance_index_censored(event.astype(bool), time.astype(float), risk.astype(float))[0])
 
 
-class LifelinesCoxWrapper:
-    def __init__(self, penalizer: float):
-        self.penalizer = penalizer
-        self.model = CoxPHFitter(penalizer=penalizer)
-
-    def fit(self, x, time, event):
-        df = pd.DataFrame(x, columns=[f"x{i}" for i in range(x.shape[1])])
-        df["T"] = time
-        df["E"] = event.astype(int)
-        self.model.fit(df, duration_col="T", event_col="E", show_progress=False)
-        return self
-
-    def predict(self, x):
-        df = pd.DataFrame(x, columns=[f"x{i}" for i in range(x.shape[1])])
-        return self.model.predict_partial_hazard(df).to_numpy(float)
-
-
-class XGBCoxWrapper:
-    def __init__(self, **params):
-        self.params = params
-        self.model = xgb.XGBRegressor(
-            objective="survival:cox",
-            eval_metric="cox-nloglik",
-            random_state=SEED,
-            tree_method="hist",
-            n_jobs=1,
-            verbosity=0,
-            **params,
-        )
-
-    def fit(self, x, time, event):
-        signed_time = np.where(event.astype(bool), time, -time)
-        self.model.fit(x, signed_time, verbose=False)
-        return self
-
-    def predict(self, x):
-        return self.model.predict(x)
-
-
-class SkSurvAdapter:
-    """Pickleable adapter giving sksurv estimators a common fit signature."""
-
-    def __init__(self, estimator):
-        self.inner = estimator
-
-    def fit(self, x, time, event):
-        self.inner.fit(x, Surv.from_arrays(event.astype(bool), time.astype(float)))
-        return self
-
-    def predict(self, x):
-        return np.asarray(self.inner.predict(x), dtype=float)
+# Survival-model wrappers now live in src/ml/wrappers.py so the saved model
+# artifacts load cold (no __main__ coupling). Imported above.
 
 
 def evaluate_config(model_name, make_model, config, x_df, time, event, folds):

@@ -1,0 +1,8 @@
+# SHA256 of committed model artifacts (BRCA-PathwayML)
+# Verify: shasum -a 256 -c docs/MODEL_SHA256.txt
+b2ee6d9648de8034df4c80ab999d1ca7562f07e60bdbc2beab173f5c579728d8  models/cox_ph.pkl
+80d21ed1fd81eb9ab2b859f4a4201d700cad0f08eecd0e1fd29c041007af0612  models/elastic_net_cox.pkl
+ef89e35d6ff7f9b1cd3c0671580cbf45be6edf25df7df1b431791976f5931a7d  models/gradient_boosted_survival.pkl
+325767e2120aabdbc47c7efe33b311d4767eaec4e22a496bec63d203c00dcedf  models/random_survival_forest.pkl
+46987bbc3b4dbdb4e1e08283a4fec7279f01c8c5539ccffacd5749a4a9d39411  models/stacked_ensemble.pkl
+f8d067031106a52e73268502c642574a2dc1cf7320595398a612df4a22b29124  models/deepsurv.pt
