@@ -1,5 +1,9 @@
 # End-to-End Peer Review Audit
 
+> Historical record (2026-06-02). The manuscript LaTeX/PDF/DOCX (`paper/`) was
+> subsequently moved out of this code repository and is maintained separately;
+> references to `paper/...` below describe that earlier state.
+
 Generated: 2026-06-02
 
 Scope: GitHub-facing repository, reviewer-facing manuscript source, compiled PDF,

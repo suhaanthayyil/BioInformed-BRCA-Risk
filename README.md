@@ -44,7 +44,6 @@ scripts/          Analysis pipeline + reviewer helpers (see inventory below)
 notebooks/        Jupyter notebooks (01-14: original analyses)
 results/          All results tables (Table_1..6, S1..S17) and QC reports
 figures/          Generated figures
-paper/            Reviewer-facing LaTeX manuscript source and DOI-backed bibliography
 data/             Raw, processed, and clinical data (committed intermediates +
                   download/regeneration scripts; large raw expression not redistributed)
 models/           Trained model artifacts (committed; see models/README.md + SHA256)
@@ -71,16 +70,11 @@ weight and score), `migrate_pickles.py` (make pickles load cold),
 `build_manuscript_docx.py`. `run_rescue_analysis.py` / `screen_rescue_top_candidates.py`
 are exploratory rescue analyses (over-fit; not a result claim -- see `docs/STORY.md`).
 
-## Manuscript LaTeX
+## Manuscript
 
-The repository includes a reviewer-facing LaTeX manuscript source at `paper/main.tex`, a DOI-backed BibTeX bibliography at `paper/main.bib`, a compiled PDF at `paper/main.pdf`, and a Word export at `paper/main.docx`. The LaTeX source mirrors the submitted competitive-not-superior framing and is intended for traceability, not as a claim that the manuscript source is the journal's copyedited version.
-
-Build commands:
-
-```bash
-cd paper && tectonic --keep-logs main.tex
-cd .. && python3 scripts/build_manuscript_docx.py
-```
+The manuscript and supplementary materials are maintained separately from this
+code repository and are not included here. This repository is the code, data,
+and reproducibility artifacts that back the submitted results.
 
 ## Data Sources
 
