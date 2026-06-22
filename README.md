@@ -35,8 +35,8 @@ Reviewer-facing traceability helpers:
 ```
 src/              survival.py, meta.py, pathways.py (authoritative pathway defs),
                   baselines.py; src/ml/ (deepsurv.py, wrappers.py = pickleable
-                  model wrappers). NOTE: features.py/models.py/data_loader.py/
-                  preprocessing.py are DEPRECATED v1 classification modules
+                  model wrappers). NOTE: features.py, models.py, data_loader.py,
+                  and preprocessing.py are DEPRECATED v1 classification modules
                   (notebook-only); see their headers.
 src/ml/           DeepSurv + the survival-model wrappers used by the saved weights
 R/                Official genefu PAM50-ROR scoring (pam50.R); install.R for R deps

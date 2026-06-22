@@ -2,7 +2,7 @@
 
 Date: 2026-05-24
 
-Submitted manuscript reviewed: `/Users/suhaan/Downloads/bmcmanu.docx`
+Submitted manuscript reviewed: `bmcmanu.docx` (submitted manuscript file)
 
 Submitted manuscript SHA256: `b01ef9151a5780b118edcda0841d848432ae2aec0892472261a9d4ec4cd461ac`
 
@@ -188,12 +188,18 @@ This is the intended reading of manuscript language describing shared clinical c
 
 ## Repository QC
 
-Current checks:
+Current checks (all green at the revision-1 tip):
 
-- `python3 -m pytest tests/`: passed
-- `python3 -m ruff check src/ tests/ scripts/`: passed
-- GitHub remote branch: `main`
-- Re-run `python3 scripts/check_submission_consistency.py` at the current commit to verify the central submitted values.
+- `python3 -m pytest tests/` -- includes the recompute smoke test
+  (`tests/test_smoke.py`, reproduces the headline per-cohort C-index from the
+  committed weights + data) and the TNBC primary-endpoint recompute
+  (`tests/test_primary_endpoint.py`).
+- `python3 -m ruff check .` (config in `pyproject.toml`).
+- `python3 scripts/check_submission_consistency.py` -- recompute-vs-committed
+  gate; exits non-zero on any mismatch.
+- `make smoke` / `make reproduce-headline` reproduce the headline results from a
+  fresh clone without raw data; CI (`.github/workflows/ci.yml`) runs all of the
+  above on every push.
 
 ## Reviewer-Facing Summary
 

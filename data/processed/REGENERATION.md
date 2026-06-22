@@ -42,8 +42,8 @@ terms; see `docs/DATA_USE.md`). To rebuild from scratch:
      `03_metabric_expression.parquet`, `04_gse20685_expression.parquet`, and the
      TCGA sample-ID alignment behind `02_tcga_feature_matrix.csv`.
    These notebooks are provided for transparency; porting them into a single
-   headless `scripts/ingest_raw.py` is tracked as follow-up work. Until then,
-   Tier 1 is the supported review path.
+   headless ingestion script is tracked as follow-up work. Until then, Tier 1
+   is the supported review path.
 
 3. **Rebuild the pipeline** from the parsed expression:
    ```bash
