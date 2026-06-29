@@ -39,9 +39,11 @@ def arrow(ax, x1, y1, x2, y2):
 
 def main() -> None:
     fig, ax = plt.subplots(figsize=(9.5, 8.4))
-    ax.set_xlim(0, 1); ax.set_ylim(0, 1); ax.axis("off")
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.axis("off")
 
-    ax.text(0.5, 0.965, "Four public breast cancer cohorts — harmonized N = 4,532",
+    ax.text(0.5, 0.965, "Four public breast cancer cohorts  (harmonized N = 4,532)",
             ha="center", fontsize=10.5, fontweight="bold")
     cohorts = [("TCGA-BRCA\nn = 213\n(training)", 0.16),
                ("GSE96058 / SCAN-B\nn = 1,483", 0.385),
@@ -77,8 +79,8 @@ def main() -> None:
         GREY_F, GREY_E, fs=9)
     arrow(ax, 0.5, 0.210, 0.5, 0.158)
     box(ax, 0.5, 0.117, 0.84, 0.082,
-        "Result: ΔC = +0.0144 (95% CI -0.047 to +0.076), p = 0.65  —  NOT MET",
-        "#fdecea", RED, fs=10, bold=True)
+        "Primary endpoint NOT MET:  ΔC = +0.0144 (95% CI -0.047 to +0.076), p = 0.65",
+        "#fdecea", RED, fs=9.6, bold=True)
     ax.text(0.5, 0.028,
             "Take-home: pathway-level transcriptomic ML is competitive with but does not exceed PAM50-ROR.",
             ha="center", fontsize=9.2, fontstyle="italic")
