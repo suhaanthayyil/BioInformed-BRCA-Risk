@@ -16,7 +16,6 @@ import pandas as pd
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.calibration_analysis import fit_probability_mapping, predict_probability  # noqa: E402
 from scripts.phase3_common import (  # noqa: E402
     ALL_COHORTS,
     BOOTSTRAP_ITER,
@@ -26,8 +25,12 @@ from scripts.phase3_common import (  # noqa: E402
     PAM50_MODEL,
     RESULTS,
     SEED,
-    binary_horizon_outcome,
     ci,
+    fit_risk_mapping,
+    ipcw_horizon,
+    km_risk,
+    predicted_risk,
+    valid_survival_subset,
     ensure_dirs,
     load_predictions,
     log_phase3,
@@ -43,51 +46,40 @@ THRESHOLDS = np.round(np.arange(0.05, 0.5001, 0.025), 3)
 HORIZON_DAYS = 5 * 365
 
 
-def net_benefit(y: np.ndarray, p: np.ndarray, threshold: float) -> float:
-    valid = np.isfinite(y) & np.isfinite(p)
-    y = y[valid].astype(int)
-    p = p[valid].astype(float)
-    if len(y) == 0:
+def net_benefit(df: pd.DataFrame, p: np.ndarray, threshold: float, days: float) -> float:
+    keep = np.isfinite(p)
+    df, p = df[keep], p[keep]
+    if len(df) == 0:
         return np.nan
     positive = p >= threshold
-    tp = int(((y == 1) & positive).sum())
-    fp = int(((y == 0) & positive).sum())
+    share = positive.mean()
+    if share == 0:
+        return 0.0
+    risk = km_risk(df[positive], days)
     odds = threshold / (1 - threshold)
-    return float(tp / len(y) - fp / len(y) * odds)
+    return float(share * risk - share * (1 - risk) * odds)
 
 
-def treat_all_net_benefit(y: np.ndarray, threshold: float) -> float:
-    valid = np.isfinite(y)
-    y = y[valid].astype(int)
-    if len(y) == 0:
-        return np.nan
-    prevalence = y.mean()
-    return float(prevalence - (1 - prevalence) * threshold / (1 - threshold))
+def treat_all_net_benefit(df: pd.DataFrame, threshold: float, days: float) -> float:
+    risk = km_risk(df, days)
+    return float(risk - (1 - risk) * threshold / (1 - threshold))
 
 
-def nri_idi_stats(y: np.ndarray, p_model: np.ndarray, p_ref: np.ndarray, threshold: float) -> dict[str, float]:
-    valid = np.isfinite(y) & np.isfinite(p_model) & np.isfinite(p_ref)
-    y = y[valid].astype(int)
-    p_model = p_model[valid].astype(float)
-    p_ref = p_ref[valid].astype(float)
-    if len(y) < 30 or y.sum() == 0 or (y == 0).sum() == 0:
+def nri_idi_stats(y: np.ndarray, w: np.ndarray, p_model: np.ndarray, p_ref: np.ndarray, threshold: float) -> dict[str, float]:
+    valid = np.isfinite(p_model) & np.isfinite(p_ref) & (w > 0)
+    y, w, p_model, p_ref = y[valid], w[valid], p_model[valid], p_ref[valid]
+    ev, ne = w * (y == 1), w * (y == 0)
+    if len(y) < 30 or ev.sum() == 0 or ne.sum() == 0:
         return {"nri": np.nan, "idi": np.nan}
-    cat_model = (p_model >= threshold).astype(int)
-    cat_ref = (p_ref >= threshold).astype(int)
-    event = y == 1
-    nonevent = y == 0
-    event_up = ((cat_model > cat_ref) & event).sum() / event.sum()
-    event_down = ((cat_model < cat_ref) & event).sum() / event.sum()
-    nonevent_down = ((cat_model < cat_ref) & nonevent).sum() / nonevent.sum()
-    nonevent_up = ((cat_model > cat_ref) & nonevent).sum() / nonevent.sum()
-    nri = float((event_up - event_down) + (nonevent_down - nonevent_up))
-    slope_model = p_model[event].mean() - p_model[nonevent].mean()
-    slope_ref = p_ref[event].mean() - p_ref[nonevent].mean()
-    idi = float(slope_model - slope_ref)
-    return {"nri": nri, "idi": idi}
+    up = (p_model >= threshold) & (p_ref < threshold)
+    down = (p_model < threshold) & (p_ref >= threshold)
+    nri = (ev[up].sum() - ev[down].sum()) / ev.sum() + (ne[down].sum() - ne[up].sum()) / ne.sum()
+    slope_model = np.average(p_model, weights=ev) - np.average(p_model, weights=ne)
+    slope_ref = np.average(p_ref, weights=ev) - np.average(p_ref, weights=ne)
+    return {"nri": float(nri), "idi": float(slope_model - slope_ref)}
 
 
-def bootstrap_nri_idi(y: np.ndarray, p_model: np.ndarray, p_ref: np.ndarray, threshold: float) -> dict[str, tuple[float, float]]:
+def bootstrap_nri_idi(y, w, p_model, p_ref, threshold) -> dict[str, tuple[float, float]]:
     rng = np.random.default_rng(SEED)
     values = {"nri": [], "idi": []}
     n = len(y)
@@ -95,64 +87,34 @@ def bootstrap_nri_idi(y: np.ndarray, p_model: np.ndarray, p_ref: np.ndarray, thr
         return {key: (np.nan, np.nan) for key in values}
     for _ in range(BOOTSTRAP_ITER):
         idx = rng.integers(0, n, n)
-        stat = nri_idi_stats(y[idx], p_model[idx], p_ref[idx], threshold)
+        stat = nri_idi_stats(y[idx], w[idx], p_model[idx], p_ref[idx], threshold)
         for key in values:
             values[key].append(stat[key])
     return {key: ci(vals) for key, vals in values.items()}
 
 
 def probability_table() -> pd.DataFrame:
-    pred = binary_horizon_outcome(load_predictions(), HORIZON_DAYS)
-    train = pred[pred["cohort"].eq("TCGA-BRCA")].copy()
-    mappings = {model: fit_probability_mapping(train, model) for model in MODELS}
-    parts = []
-    for cohort in ALL_COHORTS:
-        cohort_df = pred[pred["cohort"].eq(cohort)].copy()
-        keep = ["sample_id", "cohort", "os_days", "os_event", "horizon_event"]
-        out = cohort_df[keep].copy()
-        for model in MODELS:
-            out[f"{model}_prob_5y"] = predict_probability(mappings[model], cohort_df, model)
-        parts.append(out)
-    return pd.concat(parts, ignore_index=True)
+    pred = valid_survival_subset(load_predictions(), MODELS)
+    train = pred[pred["cohort"].eq("TCGA-BRCA")]
+    mappings = {model: fit_risk_mapping(train, model) for model in MODELS}
+    for model in MODELS:
+        pred[f"{model}_prob_5y"] = predicted_risk(mappings[model], pred, model, HORIZON_DAYS)
+    return pred
 
 
 def run_dca(probs: pd.DataFrame) -> pd.DataFrame:
     rows = []
     for cohort in ALL_COHORTS:
         sub = probs[probs["cohort"].eq(cohort)].copy()
-        y = sub["horizon_event"].to_numpy(int)
+        n = len(sub)
+        events = int(((sub["os_event"] == 1) & (sub["os_days"] <= HORIZON_DAYS)).sum())
         for threshold in THRESHOLDS:
-            rows.append(
-                {
-                    "cohort": cohort,
-                    "threshold": threshold,
-                    "strategy": "Treat all",
-                    "net_benefit": treat_all_net_benefit(y, threshold),
-                    "n": len(sub),
-                    "events": int(y.sum()),
-                }
-            )
-            rows.append(
-                {
-                    "cohort": cohort,
-                    "threshold": threshold,
-                    "strategy": "Treat none",
-                    "net_benefit": 0.0,
-                    "n": len(sub),
-                    "events": int(y.sum()),
-                }
-            )
+            base = {"cohort": cohort, "threshold": threshold, "n": n, "events_by_horizon": events}
+            rows.append({**base, "strategy": "Treat all", "net_benefit": treat_all_net_benefit(sub, threshold, HORIZON_DAYS)})
+            rows.append({**base, "strategy": "Treat none", "net_benefit": 0.0})
             for model in MODELS:
-                rows.append(
-                    {
-                        "cohort": cohort,
-                        "threshold": threshold,
-                        "strategy": MODEL_LABELS[model],
-                        "net_benefit": net_benefit(y, sub[f"{model}_prob_5y"].to_numpy(float), threshold),
-                        "n": len(sub),
-                        "events": int(y.sum()),
-                    }
-                )
+                nb = net_benefit(sub, sub[f"{model}_prob_5y"].to_numpy(float), threshold, HORIZON_DAYS)
+                rows.append({**base, "strategy": MODEL_LABELS[model], "net_benefit": nb})
     return pd.DataFrame(rows)
 
 
@@ -160,25 +122,26 @@ def run_nri_idi(probs: pd.DataFrame) -> pd.DataFrame:
     rows = []
     for cohort in ALL_COHORTS:
         sub = probs[probs["cohort"].eq(cohort)].copy()
-        y = sub["horizon_event"].to_numpy(int)
+        y, w = ipcw_horizon(sub, HORIZON_DAYS)
         p_model = sub[f"{HEADLINE_MODEL}_prob_5y"].to_numpy(float)
         p_ref = sub[f"{PAM50_MODEL}_prob_5y"].to_numpy(float)
         for threshold in (0.10, 0.20):
-            stat = nri_idi_stats(y, p_model, p_ref, threshold)
-            boot = bootstrap_nri_idi(y, p_model, p_ref, threshold)
+            stat = nri_idi_stats(y, w, p_model, p_ref, threshold)
+            boot = bootstrap_nri_idi(y, w, p_model, p_ref, threshold)
             rows.append(
                 {
                     "cohort": cohort,
                     "threshold": threshold,
                     "n": len(sub),
-                    "events": int(y.sum()),
+                    "events_by_horizon": int(y.sum()),
                     "nri": stat["nri"],
                     "nri_ci_low": boot["nri"][0],
                     "nri_ci_high": boot["nri"][1],
                     "idi": stat["idi"],
                     "idi_ci_low": boot["idi"][0],
                     "idi_ci_high": boot["idi"][1],
-                    "comparison": "Gradient_Boosted_Survival minus PAM50_ROR_official",
+                    "comparison": f"{HEADLINE_MODEL} minus {PAM50_MODEL}",
+                    "method": "IPCW-weighted",
                     "analysis_type": "exploratory_secondary",
                 }
             )

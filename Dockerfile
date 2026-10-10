@@ -1,7 +1,7 @@
 # Reference reproduction environment for BRCA-PathwayML (BMC AI revision, E3).
 #
 # Provides Python 3.12 (pinned deps from requirements.txt) + system R with the
-# genefu/GSVA/mice packages needed for the official PAM50-ROR scoring path.
+# genefu/GSVA/mice packages needed for the genefu PAM50 ROR-S scoring path.
 #
 # NOTE: this image is heavy and slow to build -- compiling the Bioconductor
 # `genefu` stack (and its dependencies) from source under r-base takes a while.

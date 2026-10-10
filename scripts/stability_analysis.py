@@ -14,8 +14,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import StratifiedShuffleSplit
-from sksurv.ensemble import GradientBoostingSurvivalAnalysis
-from sksurv.util import Surv
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
@@ -31,6 +29,7 @@ from scripts.phase3_common import (  # noqa: E402
     spearman_pairwise,
 )
 from scripts.train_ml_zoo import cindex, make_preprocessor  # noqa: E402
+from src.ml import registry  # noqa: E402
 
 N_SUBSAMPLES = 100
 
@@ -42,7 +41,7 @@ def load_config() -> dict:
 
 
 def permutation_importance(
-    model: GradientBoostingSurvivalAnalysis,
+    model,
     preprocessor,
     x_test: pd.DataFrame,
     time: np.ndarray,
@@ -51,12 +50,12 @@ def permutation_importance(
     rng: np.random.Generator,
 ) -> dict[str, float]:
     x_scaled = preprocessor.transform(x_test)
-    baseline = cindex(time, event, model.predict(x_scaled))
+    baseline = cindex(time, event, np.ravel(model.predict(x_scaled)))
     values = {}
     for feature in features:
         shuffled = x_test.copy()
         shuffled[feature] = rng.permutation(shuffled[feature].to_numpy())
-        risk = model.predict(preprocessor.transform(shuffled))
+        risk = np.ravel(model.predict(preprocessor.transform(shuffled)))
         values[feature] = float(baseline - cindex(time, event, risk))
     return values
 
@@ -85,8 +84,8 @@ def run_analysis() -> tuple[pd.DataFrame, pd.DataFrame, np.ndarray]:
             continue
         preprocessor = make_preprocessor()
         x_sub_scaled = preprocessor.fit_transform(x_sub)
-        model = GradientBoostingSurvivalAnalysis(random_state=SEED + run, **config)
-        model.fit(x_sub_scaled, Surv.from_arrays(event_sub, time_sub))
+        model = registry.make_estimator(HEADLINE_MODEL, config, seed=SEED + run)
+        model.fit(x_sub_scaled, time_sub, event_sub)
         values = permutation_importance(model, preprocessor, x_oob, time_oob, event_oob, features, rng)
         ranked = pd.Series(values).rank(ascending=False, method="average")
         for feature in features:

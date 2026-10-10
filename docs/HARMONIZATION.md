@@ -11,10 +11,10 @@ reproducible from `results/reports/cohort_gene_overlap.csv`,
 
 | Cohort | Platform | Genes | Retained n | Probe→gene collapse |
 |--------|----------|------:|-----------:|---------------------|
-| TCGA-BRCA | RNA-seq, GDC log2 RSEM-normalized | (GDC) | 213 | gene-level already (HGNC symbols) |
-| GSE96058 / SCAN-B | RNA-seq, GEO transformed | 30,865 | 1,483 | gene-level (symbols) |
-| METABRIC | Illumina microarray, cBioPortal z-scores vs diploid | 20,603 | 1,981 | gene-level (cBioPortal collapsed) |
-| GSE20685 | Affymetrix HG-U133 Plus 2.0 (GPL570) | 22,189 | 327 | probes mapped to symbols via `data/raw/GPL570.annot.gz`; multi-probe genes collapsed to the max-variance probe |
+| TCGA-BRCA | RNA-seq, UCSC Xena HiSeqV2 log2(RSEM+1) | 20,530 | 1,064 | gene-level already (HGNC symbols) |
+| GSE96058 / SCAN-B | RNA-seq, GEO transformed | 30,865 | 3,273 | gene-level (symbols) |
+| METABRIC | Illumina microarray, cBioPortal z-scores vs diploid | 20,603 | 1,980 analysed (of 2,509 clinical records; 1,981 records have OS, 1,980 of them have expression) | gene-level (cBioPortal collapsed) |
+| GSE20685 | Affymetrix HG-U133 Plus 2.0 (GPL570) | 22,189 | 327 | probes mapped to symbols via `data/raw/GPL570.annot.gz`; multi-probe genes collapsed by averaging probes |
 
 Gene symbols are upper-cased and matched to MSigDB v2024.1.Hs gene-set symbols
 (`scripts/score_pathways.py`). 9,509 GSE20685 probes without a gene symbol were
@@ -29,34 +29,35 @@ from a small lowest-common-denominator gene set:
 
 | Cohort | Pathway sets scored | Mean gene coverage | Min set coverage |
 |--------|--------------------:|-------------------:|-----------------:|
-| METABRIC | 347 | 0.985 | 0.349 |
+| METABRIC | 347 | 0.984 | 0.349 |
 | GSE96058 | 347 | 0.964 | 0.106 |
 | TCGA-BRCA | 345 | 0.947 | 0.106 |
 | GSE20685 | 344 | 0.944 | 0.106 |
 
 Per-set, per-cohort coverage is in `results/reports/pathway_scoring_coverage.csv`.
 
-## Normalization — no cross-cohort leakage
+## Normalization
 
-1. **Pathway-set scores** are computed per cohort, then z-scored **within each
-   cohort** (`aggregate_seven_pathways` in `src/pathways.py`:
-   `z = (z - z.mean) / z.std` over that cohort's samples). The seven features are
-   the mean of their constituent set z-scores. Because standardization is
-   within-cohort, raw platform scale differences (e.g. METABRIC microarray
-   z-scores vs RNA-seq) do not propagate across cohorts.
-2. **Model preprocessing** (`SimpleImputer(median)` → `StandardScaler`) is fit on
-   **TCGA-BRCA training data only** and applied unchanged (`.transform`) to every
-   external cohort (`scripts/external_validation.py`). No external label or
-   distribution information enters training — there is no cross-cohort leakage.
+1. **Gene-level standardization within each cohort.** Before scoring, every
+   cohort's expression is z-scored per gene over that cohort's own samples
+   (`zscore_by_gene` in `src/pathways.py`, called by `scripts/score_pathways.py`).
+   This includes the external cohorts. It is unsupervised (no outcome or label is
+   used) and is the only step that uses an external cohort's own data; it puts
+   RNA-seq and microarray platforms on a common relative scale.
+2. **Pathway-set scores** are computed per sample from within-sample ranks, then
+   z-scored within each cohort and averaged into the seven features
+   (`aggregate_seven_pathways`).
+3. **Model preprocessing** (`SimpleImputer(median)` → `StandardScaler`) and every
+   model parameter are fit on **TCGA-BRCA only** and applied unchanged
+   (`.transform` / `.predict`) to the external cohorts. No external outcome
+   information enters training, tuning or model selection; "applied without
+   refitting" refers to these fitted components.
 
 ## Residual heterogeneity
 
-Even after harmonization, platform and population differences remain. This is
-quantified directly in the random-effects meta-analysis of the TNBC primary
-endpoint: I² = 10.5%, τ² = 0.00045
-(`data/processed/phase6_primary_endpoint.json`) — low-to-moderate heterogeneity
-across the three TNBC-evaluable cohorts. Per-cohort discrimination differs
-substantially (e.g. external GBSA Harrell C ranges 0.55–0.66 across cohorts;
-`results/Table_1_ml_external_validation.csv`), which is consistent with genuine
-cross-cohort heterogeneity and is the reason external superiority over PAM50-ROR
-was not established.
+Platform and population differences remain after harmonization. For the TNBC
+primary endpoint the random-effects heterogeneity is I² = 0%
+(`data/processed/phase6_primary_endpoint.json`). Overall discrimination of the
+selected model differs across cohorts (Harrell C 0.552 to 0.672;
+`results/Table_2_external_validation.csv`), consistent with genuine platform and
+population heterogeneity.

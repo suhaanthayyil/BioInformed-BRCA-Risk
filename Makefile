@@ -44,7 +44,7 @@ reproduce-headline: ## Reproduce headline external-validation tables + endpoint,
 smoke: ## Fast recompute smoke test + primary-endpoint test
 	$(PYTHON) -m pytest tests/test_smoke.py tests/test_primary_endpoint.py -q
 
-test: ## Full test suite (test_pam50_official.py auto-skips without R/genefu)
+test: ## Full test suite (test_pam50_genefu.py auto-skips without R/genefu)
 	$(PYTHON) -m pytest tests/ -q
 
 lint: ## Lint with ruff; type-check with mypy (mypy is non-blocking)
@@ -54,16 +54,25 @@ lint: ## Lint with ruff; type-check with mypy (mypy is non-blocking)
 consistency: ## Recompute-vs-committed submission consistency gate (exit 0 = all pass)
 	$(PYTHON) scripts/check_submission_consistency.py
 
-phase3: ## Phase-3 exploratory analyses (read external-validation results)
+phase3: ## Registered endpoints, sensitivity and exploratory analyses
+	$(PYTHON) scripts/registered_endpoints.py
+	$(PYTHON) scripts/external_only_tnbc_sensitivity.py
+	$(PYTHON) scripts/locked_model_sensitivity.py
+	$(PYTHON) scripts/age_adjusted_comparison.py
+	$(PYTHON) scripts/feature_ablation.py
 	$(PYTHON) scripts/within_subtype_analysis.py
 	$(PYTHON) scripts/calibration_analysis.py
 	$(PYTHON) scripts/dca_analysis.py
 	$(PYTHON) scripts/stability_analysis.py
+	$(PYTHON) scripts/recurrence_sensitivity.py
+	$(PYTHON) scripts/learning_curve.py
 
 figures: ## Build manuscript figures and tables
 	$(PYTHON) scripts/build_table1.py
-	$(PYTHON) scripts/build_cohort_flow.py
+	$(PYTHON) scripts/build_figure1_consort.py
 	$(PYTHON) scripts/build_forest_plot.py
+	$(PYTHON) scripts/build_figure6_stability.py
+	$(PYTHON) scripts/build_figure7_workflow.py
 	$(PYTHON) scripts/compute_model_attributions.py
 
 all: ## Full Tier-1 chain from committed intermediates
@@ -77,16 +86,14 @@ all: ## Full Tier-1 chain from committed intermediates
 # NOT committed (see data/processed/REGENERATION.md and data/raw/README.md) and
 # an R install with genefu/GSVA/mice (see R/install.R).
 #
-# NOTE: the raw-expression -> expression-parquet parse step currently lives in
-# notebooks/01_data_preprocessing.ipynb (run top-to-bottom) and is not yet a
-# headless script, so this target is NOT fully turnkey -- run that notebook
-# between `fetch` and the pipeline steps. Tier 1 (`make all`) is the supported
-# review path.
+# scripts/ingest_raw.py parses TCGA-BRCA (Xena + TCGA-CDR), GSE96058 and the
+# METABRIC expression matrix. GSE20685 parquets ship with the repository.
 fetch: ## Download raw expression + gene sets (Tier 2 only; see data/raw/README.md)
 	cd data/raw && bash download_data.sh
 	cd data/raw && bash download_gene_sets.sh
 
-all-from-raw: fetch ## Tier-2 full rebuild from raw (see NOTE above re: notebook parse step)
+all-from-raw: fetch ## Tier-2 full rebuild from raw
+	$(PYTHON) scripts/ingest_raw.py
 	$(PYTHON) scripts/harmonize_cohorts.py
 	$(PYTHON) scripts/score_pathways.py
 	$(PYTHON) scripts/compute_clinical_baselines.py

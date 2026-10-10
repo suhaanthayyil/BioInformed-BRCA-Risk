@@ -5,6 +5,8 @@
 data/raw/GSE96058_gene_expression*.csv
 data/raw/metabric/
 data/raw/gene_sets/
+data/raw/tcga/
+data/raw/gse96058/
 data/quarantine/
 data/01_tcga_expression_normalized.csv
 data/processed/*.parquet

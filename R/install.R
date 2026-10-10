@@ -5,7 +5,7 @@
 # GSEABase are Bioconductor packages, mice is on CRAN.
 #
 # Required packages, and the script that uses each:
-#   genefu    -- R/pam50.R         (official PAM50 subtyping + rorS / ROR-S)
+#   genefu    -- R/pam50.R         (genefu PAM50 subtyping + rorS / ROR-S)
 #   GSVA      -- R/gsva.R          (ssGSEA pathway scoring)
 #   GSEABase  -- R/gsva.R          (getGmt: read .gmt gene-set files)
 #   mice      -- R/mice_impute.R   (multiple imputation by chained equations)

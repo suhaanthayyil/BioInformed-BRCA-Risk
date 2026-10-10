@@ -23,7 +23,7 @@ Usage:
 
 from __future__ import annotations
 
-import pickle
+import joblib
 import shutil
 import sys
 import __main__
@@ -67,10 +67,8 @@ def migrate(name: str) -> None:
     backup_path = BACKUP / name
     if not backup_path.exists():
         shutil.copy2(path, backup_path)
-    with path.open("rb") as fh:
-        artifact = pickle.load(fh)
-    with path.open("wb") as fh:
-        pickle.dump(artifact, fh)
+    artifact = joblib.load(path)
+    joblib.dump(artifact, path, compress=3)
     print(f"  migrated: {name}")
 
 
@@ -79,8 +77,8 @@ def verify_cold(name: str) -> bool:
     import subprocess
 
     code = (
-        f"import sys, pickle; sys.path.insert(0, r'{REPO_ROOT}'); "
-        f"pickle.load(open(r'{MODELS / name}','rb')); print('ok')"
+        f"import sys, joblib; sys.path.insert(0, r'{REPO_ROOT}'); "
+        f"joblib.load(r'{MODELS / name}'); print('ok')"
     )
     result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
     return result.returncode == 0 and "ok" in result.stdout

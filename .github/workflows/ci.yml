@@ -24,8 +24,8 @@ jobs:
   tests:
     name: tests (pytest)
     runs-on: ubuntu-latest
-    # This job installs R + the genefu Bioconductor package so the official
-    # PAM50-ROR regression test (tests/test_pam50_official.py) actually runs.
+    # This job installs R + the genefu Bioconductor package so the genefu
+    # PAM50 ROR-S regression test (tests/test_pam50_genefu.py) actually runs.
     # Without R/genefu that test auto-skips (see conftest.py); the rest of the
     # suite still runs.
     steps:

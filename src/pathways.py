@@ -198,7 +198,7 @@ def rank_ssgsea_scores(samples_by_gene: pd.DataFrame, gene_sets: dict[str, list[
 
 
 def aggregate_seven_pathways(pathway_scores: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Aggregate pathway-set scores into the seven pre-registered features."""
+    """Aggregate pathway-set scores into the seven registered features."""
 
     z = pathway_scores.apply(pd.to_numeric, errors="coerce")
     z = (z - z.mean(axis=0)) / z.std(axis=0, ddof=0).replace(0, np.nan)

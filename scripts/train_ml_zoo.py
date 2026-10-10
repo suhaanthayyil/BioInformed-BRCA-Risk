@@ -5,12 +5,12 @@ from __future__ import annotations
 
 import json
 import os
-import pickle
 import sys
 from datetime import datetime
 from pathlib import Path
 
 import duckdb
+import joblib
 import numpy as np
 import pandas as pd
 import torch
@@ -32,6 +32,7 @@ from src.ml.wrappers import (  # noqa: E402
     SkSurvAdapter,
     XGBCoxWrapper,
 )
+from src.clinical import PRIMARY_FEATURES, stage_to_ordinal  # noqa: E402
 from src.survival import brier_score_at, time_dependent_auc  # noqa: E402
 
 
@@ -43,17 +44,9 @@ MODELS = REPO_ROOT / "models"
 LOGS = REPO_ROOT / "logs"
 SEED = 42
 N_SPLITS = 5
-
-PATHWAY_FEATURES = [
-    "Pathway_Immune",
-    "Pathway_Proliferation",
-    "Pathway_DNA_Repair",
-    "Pathway_Metabolism",
-    "Pathway_Stromal_EMT",
-    "Pathway_Apoptosis_Stress",
-    "Pathway_Hormone",
-]
-
+N_REPEATS = 5
+TOP_K = 5
+HEADLINE_CANDIDATES = ["Random_Survival_Forest", "Gradient_Boosted_Survival", "DeepSurv"]
 
 def timestamp() -> str:
     return datetime.now().astimezone().isoformat(timespec="seconds")
@@ -63,19 +56,6 @@ def log(message: str) -> None:
     LOGS.mkdir(exist_ok=True)
     with (LOGS / "agent_log.md").open("a") as fh:
         fh.write(f"\n- {timestamp()} {message}\n")
-
-
-def stage_to_ordinal(value) -> float:
-    text = "" if pd.isna(value) else str(value).upper()
-    if "IV" in text:
-        return 4.0
-    if "III" in text:
-        return 3.0
-    if "II" in text:
-        return 2.0
-    if "I" in text:
-        return 1.0
-    return np.nan
 
 
 def load_modeling_frame() -> pd.DataFrame:
@@ -96,8 +76,7 @@ def load_modeling_frame() -> pd.DataFrame:
 
 
 def feature_columns(frame: pd.DataFrame) -> list[str]:
-    clinical = ["age_at_dx", "stage_ordinal"]
-    return [c for c in [*PATHWAY_FEATURES, *clinical] if c in frame.columns]
+    return [c for c in PRIMARY_FEATURES if c in frame.columns]
 
 
 def make_preprocessor() -> Pipeline:
@@ -125,10 +104,7 @@ def evaluate_config(model_name, make_model, config, x_df, time, event, folds):
         t_test, e_test = time[test_idx], event[test_idx]
         try:
             model = make_model(config)
-            if model_name == "DeepSurv":
-                model.fit(x_train, t_train, e_train, x_test, t_test, e_test)
-            else:
-                model.fit(x_train, t_train, e_train)
+            model.fit(x_train, t_train, e_train)
             risk = np.asarray(model.predict(x_test), dtype=float)
             oof[test_idx] = risk
             fold_scores.append(cindex(t_test, e_test, risk))
@@ -143,6 +119,29 @@ def evaluate_config(model_name, make_model, config, x_df, time, event, folds):
         "fold_cindexes": [float(x) for x in fold_scores],
         "oof_risk": oof,
     }
+
+
+def refine(model_name, make_model, candidates, x_df, time, event):
+    if model_name in {"Elastic_Net_Cox", "Random_Survival_Forest", "Gradient_Boosted_Survival"}:
+        def maker(cfg, base=make_model):
+            return SkSurvAdapter(base(cfg))
+    else:
+        maker = make_model
+    top = sorted(candidates, key=lambda item: item["mean_cindex"], reverse=True)[:TOP_K]
+    log(f"Phase 5 {model_name}: re-scoring top {len(top)} configs with {N_REPEATS}x{N_SPLITS} repeated CV.")
+    for item in top:
+        scores = list(item["fold_cindexes"])
+        for repeat in range(1, N_REPEATS):
+            folds = list(
+                StratifiedKFold(n_splits=N_SPLITS, shuffle=True, random_state=SEED + repeat).split(x_df, event.astype(int))
+            )
+            extra = evaluate_config(model_name, maker, item["config"], x_df, time, event, folds)
+            scores.extend(extra["fold_cindexes"] if extra else [np.nan] * N_SPLITS)
+        item["single_split_cindex"] = item["mean_cindex"]
+        item["mean_cindex"] = float(np.nanmean(scores))
+        item["sd_cindex"] = float(np.nanstd(scores, ddof=1))
+        item["n_cv_folds"] = int(np.isfinite(scores).sum())
+    return max(top, key=lambda item: item["mean_cindex"])
 
 
 def fit_final_model(model_name, make_model, config, x_df, time, event):
@@ -170,8 +169,7 @@ def save_model_artifact(model_name: str, artifact: dict) -> str:
         )
         return str(path.relative_to(REPO_ROOT))
     path = MODELS / f"{safe}.pkl"
-    with path.open("wb") as fh:
-        pickle.dump(artifact, fh)
+    joblib.dump(artifact, path, compress=3)
     return str(path.relative_to(REPO_ROOT))
 
 
@@ -197,33 +195,33 @@ def model_spaces():
                 min_samples_leaf=cfg["min_samples_leaf"],
                 max_features=cfg["max_features"],
                 random_state=SEED,
-                n_jobs=2,
+                n_jobs=-1,
             ),
             [
-                {"n_estimators": n, "max_depth": d, "min_samples_leaf": leaf, "max_features": mf}
-                for n in [500]
-                for d in [None, 4, 8]
-                for leaf in [1, 5, 10]
-                for mf in ["sqrt", None]
+                {"n_estimators": 500, "max_depth": d, "min_samples_leaf": leaf, "max_features": mf}
+                for d in [None, 3, 5, 8, 12]
+                for leaf in [3, 5, 10, 20, 40]
+                for mf in ["sqrt", 0.5, None]
             ],
         ),
         "Gradient_Boosted_Survival": (
             lambda cfg: GradientBoostingSurvivalAnalysis(random_state=SEED, **cfg),
             [
                 {"n_estimators": n, "learning_rate": lr, "max_depth": d, "subsample": ss}
-                for n in [100, 300]
-                for lr in [0.03, 0.1]
-                for d in [1, 3]
-                for ss in [0.8, 1.0]
+                for n in [100, 300, 600]
+                for lr in [0.01, 0.03, 0.1]
+                for d in [1, 2, 3]
+                for ss in [0.5, 0.8, 1.0]
             ],
         ),
         "DeepSurv": (
             lambda cfg: DeepSurvEstimator(DeepSurvConfig(**cfg)),
             [
-                {"hidden_dims": (32,), "dropout": 0.1, "lr": 1e-3, "weight_decay": 1e-4, "epochs": 120, "patience": 15},
-                {"hidden_dims": (64, 32), "dropout": 0.1, "lr": 1e-3, "weight_decay": 1e-4, "epochs": 150, "patience": 20},
-                {"hidden_dims": (64, 32), "dropout": 0.2, "lr": 5e-4, "weight_decay": 1e-4, "epochs": 150, "patience": 20},
-                {"hidden_dims": (128, 64), "dropout": 0.2, "lr": 5e-4, "weight_decay": 1e-4, "epochs": 150, "patience": 20},
+                {"hidden_dims": h, "dropout": dr, "lr": lr, "weight_decay": wd, "epochs": 300, "patience": 30}
+                for h in [(16,), (32,), (64,), (64, 32), (128, 64)]
+                for dr in [0.1, 0.3]
+                for lr in [1e-3, 3e-4]
+                for wd in [1e-4, 1e-2]
             ],
         ),
     }
@@ -264,8 +262,7 @@ def train_stacked_ensemble(results, artifacts, x_df, time, event):
         "features": list(x_df.columns),
     }
     path = MODELS / "stacked_ensemble.pkl"
-    with path.open("wb") as fh:
-        pickle.dump(artifact, fh)
+    joblib.dump(artifact, path, compress=3)
     return {
         "model": "Stacked_Ensemble",
         "config": {"top_models": [item["model"] for item in top]},
@@ -294,7 +291,7 @@ def main() -> None:
     results = []
     artifacts = {}
     for model_name, (make_model, configs) in model_spaces().items():
-        log(f"Phase 5 training {model_name} with {len(configs)} compact-grid configs.")
+        log(f"Phase 5 training {model_name} with {len(configs)} configs.")
         candidates = []
         for config in configs:
             # scikit-survival models consume structured y, handled by adapter below.
@@ -310,7 +307,7 @@ def main() -> None:
         if not candidates:
             log(f"Phase 5 no valid candidates for {model_name}.")
             continue
-        best = max(candidates, key=lambda item: item["mean_cindex"])
+        best = refine(model_name, make_model, candidates, x_df, time, event)
         results.append(best)
 
         if model_name in {"Elastic_Net_Cox", "Random_Survival_Forest", "Gradient_Boosted_Survival"}:
@@ -339,6 +336,8 @@ def main() -> None:
                 "model": item["model"],
                 "mean_cv_cindex": item["mean_cindex"],
                 "sd_cv_cindex": item["sd_cindex"],
+                "single_split_cv_cindex": item.get("single_split_cindex", np.nan),
+                "n_cv_folds": item.get("n_cv_folds", N_SPLITS),
                 "fold_cindexes": json.dumps(item["fold_cindexes"]),
                 "config": json.dumps(item["config"], default=list),
                 "artifact_path": item.get("artifact_path", ""),
@@ -351,7 +350,8 @@ def main() -> None:
     cox = table.loc[table["model"].eq("Cox_PH"), "mean_cv_cindex"]
     cox_value = float(cox.iloc[0]) if len(cox) else np.nan
     table["delta_vs_cox"] = table["mean_cv_cindex"] - cox_value
-    headline = table.iloc[0].to_dict()
+    table["headline_eligible"] = table["model"].isin(HEADLINE_CANDIDATES)
+    headline = table[table["headline_eligible"]].iloc[0].to_dict()
 
     RESULTS.mkdir(exist_ok=True)
     REPORTS.mkdir(exist_ok=True)
@@ -373,9 +373,10 @@ def main() -> None:
         "n_training_samples": int(len(train)),
         "n_events": int(event.sum()),
         "features": features,
-        "grid_mode": "compact_local",
+        "grid_mode": "expanded",
+        "selection": f"top {TOP_K} configs per model from 5-fold CV re-scored with {N_REPEATS}x{N_SPLITS} repeated stratified CV; highest mean wins",
         "note": (
-            "Compact grid used for local tractability; XGBoost Cox disabled by default "
+            "Expanded grid; XGBoost Cox disabled by default "
             "after repeated native process termination. Set ENABLE_XGBOOST_SURVIVAL=1 "
             "to retry that optional cross-check."
         ),
@@ -396,9 +397,9 @@ def main() -> None:
         "",
         table.to_markdown(index=False, floatfmt=".3f"),
         "",
-        f"Headline model by TCGA CV: {headline['model']} (C-index {headline['mean_cv_cindex']:.3f}, delta vs Cox {headline['delta_vs_cox']:.3f}).",
+        f"Headline model (best registered non-linear candidate: RSF, GBSA or DeepSurv) by TCGA CV: {headline['model']} (C-index {headline['mean_cv_cindex']:.3f}, delta vs Cox {headline['delta_vs_cox']:.3f}).",
         "",
-        "Grid mode: compact local grid. This is explicitly recorded and should not be described as the full protocol grid.",
+        "Grid mode: expanded grid (RSF 75, GBSA 81, DeepSurv 40 configurations); top 5 per model re-scored with 5x5 repeated CV; selection uses TCGA only.",
         "XGBoost Cox is disabled by default because the local native library repeatedly terminated the process without a Python traceback.",
         "",
     ]

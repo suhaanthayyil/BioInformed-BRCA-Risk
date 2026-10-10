@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import pickle
 import sys
 import __main__
 from datetime import datetime
@@ -12,13 +11,15 @@ from pathlib import Path
 import duckdb
 import numpy as np
 import pandas as pd
+from lifelines import CoxPHFitter, KaplanMeierFitter
 from scipy import stats
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.train_ml_zoo import stage_to_ordinal  # noqa: E402
+from src.clinical import stage_to_ordinal  # noqa: E402
 from src.meta import random_effects_from_ci  # noqa: E402
+from src.ml import registry  # noqa: E402
 from src.ml.wrappers import SkSurvAdapter  # noqa: E402,F401  (imported so pickled artifacts resolve)
 from src.survival import (  # noqa: E402
     bootstrap_c_index_ci,
@@ -38,8 +39,8 @@ LOGS = REPO_ROOT / "logs"
 
 SEED = 42
 BOOTSTRAP_ITER = 1000
-HEADLINE_MODEL = "Gradient_Boosted_Survival"
-PAM50_MODEL = "PAM50_ROR_official"
+HEADLINE_MODEL = registry.headline_name()
+PAM50_MODEL = "PAM50_RORS_genefu"
 COX_MODEL = "Cox_PH"
 EXTERNAL_COHORTS = ["GSE96058", "METABRIC", "GSE20685"]
 ALL_COHORTS = ["TCGA-BRCA", "GSE96058", "METABRIC", "GSE20685"]
@@ -110,16 +111,11 @@ def load_modeling_frame() -> pd.DataFrame:
 
 
 def load_headline_artifact() -> dict:
-    with (MODELS / "gradient_boosted_survival.pkl").open("rb") as fh:
-        return pickle.load(fh)
+    return registry.load_artifact(HEADLINE_MODEL)
 
 
 def predict_headline(frame: pd.DataFrame, artifact: dict | None = None) -> np.ndarray:
-    if artifact is None:
-        artifact = load_headline_artifact()
-    x = frame[artifact["features"]]
-    x_scaled = artifact["preprocessor"].transform(x)
-    return np.asarray(artifact["model"].predict(x_scaled), dtype=float)
+    return registry.predict(artifact or load_headline_artifact(), frame)
 
 
 def valid_survival_subset(df: pd.DataFrame, risk_cols: list[str]) -> pd.DataFrame:
@@ -162,13 +158,46 @@ def meta_from_rows(rows: pd.DataFrame) -> dict:
     return random_effects_from_ci(rows, "delta_vs_pam50", "delta_ci_low", "delta_ci_high")
 
 
-def binary_horizon_outcome(df: pd.DataFrame, horizon_days: int) -> pd.DataFrame:
-    out = df.copy()
-    event_before = (out["os_event"].astype(int).eq(1)) & (out["os_days"] <= horizon_days)
-    censored_before = (out["os_event"].astype(int).eq(0)) & (out["os_days"] < horizon_days)
-    out = out[~censored_before].copy()
-    out["horizon_event"] = event_before.loc[out.index].astype(int)
-    return out
+def censoring_survival(time: np.ndarray, event: np.ndarray) -> KaplanMeierFitter:
+    return KaplanMeierFitter().fit(time, 1 - event)
+
+
+def ipcw_horizon(df: pd.DataFrame, horizon_days: float) -> tuple[np.ndarray, np.ndarray]:
+    time = df["os_days"].to_numpy(float)
+    event = df["os_event"].to_numpy(int)
+    km = censoring_survival(time, event)
+    died = (event == 1) & (time <= horizon_days)
+    beyond = time > horizon_days
+    g_event = km.predict(np.maximum(time - 1e-6, 0)).to_numpy()
+    g_horizon = float(km.predict(horizon_days))
+    weights = np.where(died, 1 / np.clip(g_event, 1e-3, None), np.where(beyond, 1 / max(g_horizon, 1e-3), 0.0))
+    return died.astype(int), weights
+
+
+def km_risk(df: pd.DataFrame, horizon_days: float) -> float:
+    if len(df) == 0:
+        return np.nan
+    km = KaplanMeierFitter().fit(df["os_days"].to_numpy(float), df["os_event"].to_numpy(int))
+    return float(1 - km.predict(horizon_days))
+
+
+def horizon_reached(df: pd.DataFrame, horizon_days: float, min_at_risk: int = 20) -> bool:
+    return bool((df["os_days"] > horizon_days).sum() >= min_at_risk)
+
+
+def fit_risk_mapping(train: pd.DataFrame, risk_col: str) -> CoxPHFitter | None:
+    df = train.dropna(subset=[risk_col, "os_days", "os_event"])
+    df = df[df["os_days"] > 0]
+    if len(df) < 30 or df["os_event"].sum() < 5:
+        return None
+    return CoxPHFitter(penalizer=0.01).fit(df[[risk_col, "os_days", "os_event"]], "os_days", "os_event")
+
+
+def predicted_risk(model: CoxPHFitter | None, df: pd.DataFrame, risk_col: str, horizon_days: float) -> np.ndarray:
+    if model is None or len(df) == 0:
+        return np.full(len(df), np.nan)
+    surv = model.predict_survival_function(df[[risk_col]], times=[horizon_days])
+    return 1 - surv.to_numpy().ravel()
 
 
 def ci(values: list[float] | np.ndarray) -> tuple[float, float]:

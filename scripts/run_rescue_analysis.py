@@ -3,7 +3,7 @@
 
 This script deliberately keeps the pre-registered Phase 6 result intact. It
 adds an exploratory model/feature search selected on TCGA only, then evaluates
-the selected rescue model against official genefu PAM50-ROR on held-out cohorts.
+the selected rescue model against genefu PAM50 ROR-S (research implementation) on held-out cohorts.
 """
 
 from __future__ import annotations
@@ -37,6 +37,7 @@ from sksurv.util import Surv
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
+from src.clinical import stage_to_ordinal  # noqa: E402
 from src.meta import random_effects_from_ci  # noqa: E402
 from src.ml.deepsurv import DeepSurvConfig, DeepSurvEstimator  # noqa: E402
 from src.pathways import SEVEN_PATHWAY_COMPONENTS  # noqa: E402
@@ -60,7 +61,7 @@ LOGS = REPO_ROOT / "logs"
 SEED = 42
 N_SPLITS = 5
 BOOTSTRAP_ITER = 1000
-PAM50_COMPARATOR = "PAM50_ROR_official"
+PAM50_COMPARATOR = "PAM50_RORS_genefu"
 TRAINING_COHORT = "TCGA-BRCA"
 PRIMARY_COHORTS = ["GSE96058", "METABRIC", "TCGA-BRCA"]
 EXTERNAL_ONLY_COHORTS = ["GSE96058", "METABRIC"]
@@ -85,19 +86,6 @@ def log(message: str) -> None:
     LOGS.mkdir(exist_ok=True)
     with (LOGS / "agent_log.md").open("a") as fh:
         fh.write(f"\n- {timestamp()} {message}\n")
-
-
-def stage_to_ordinal(value: object) -> float:
-    text = "" if pd.isna(value) else str(value).upper()
-    if "IV" in text:
-        return 4.0
-    if "III" in text:
-        return 3.0
-    if "II" in text:
-        return 2.0
-    if "I" in text:
-        return 1.0
-    return np.nan
 
 
 def status_positive(value: object) -> float:
@@ -785,7 +773,7 @@ def write_report(
         "",
         f"Generated: {timestamp()}",
         "",
-        "This is an exploratory transparent rescue run. The locked Phase 6 primary endpoint remains unchanged.",
+        "This is an exploratory post-hoc screen. It does not replace the registered primary endpoint.",
         "",
         "## METABRIC Expression Audit",
         "",
@@ -799,7 +787,7 @@ def write_report(
         "",
         f"Headline rescue model: `{headline_name}` selected by TCGA-only composite CV.",
         "",
-        "## External TNBC Rows vs Official PAM50",
+        "## External TNBC Rows vs genefu PAM50 ROR-S",
         "",
         h2h[h2h["subgroup"].eq("tnbc")].to_markdown(index=False, floatfmt=".3f"),
         "",
@@ -889,7 +877,7 @@ def main() -> None:
         )
 
     _, metrics, h2h = evaluate_external(frame, artifacts, headline_name)
-    metrics.to_csv(RESULTS / "Table_S5_rescue_external_validation.csv", index=False)
+    metrics.to_csv(RESULTS / "Table_S6_rescue_external_validation.csv", index=False)
     h2h.to_csv(RESULTS / "Table_S6_rescue_head_to_head.csv", index=False)
 
     primary = primary_summary(h2h, PRIMARY_COHORTS, "all_protocol_tnbc_cohorts")

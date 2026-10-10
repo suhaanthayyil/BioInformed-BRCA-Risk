@@ -47,26 +47,9 @@ def log(message: str) -> None:
         fh.write(f"\n- {timestamp()} {message}\n")
 
 
-def load_tcga_expression() -> pd.DataFrame:
-    expr = pd.read_csv(DATA / "01_tcga_expression_normalized.csv")
-    feature_matrix = pd.read_csv(PROCESSED / "02_tcga_feature_matrix.csv")
-    if "sample_id" in expr.columns:
-        expr = expr.set_index(expr["sample_id"].astype(str)).drop(columns=["sample_id"])
-        expr.index.name = "sample_id"
-        expr = expr.reindex(feature_matrix["sample_id"].astype(str))
-        expr.columns = [str(c).upper() for c in expr.columns]
-        return expr.apply(pd.to_numeric, errors="coerce").astype("float32")
-    if len(expr) != len(feature_matrix):
-        raise ValueError("TCGA expression rows do not match TCGA feature matrix rows")
-    expr.index = feature_matrix["sample_id"].astype(str)
-    expr.index.name = "sample_id"
-    expr.columns = [str(c).upper() for c in expr.columns]
-    return expr.astype("float32")
-
-
 def load_expression(cohort: str) -> pd.DataFrame:
     if cohort == "TCGA-BRCA":
-        return load_tcga_expression()
+        return expression_wide_to_samples_by_gene(pd.read_parquet(PROCESSED / "01_tcga_expression.parquet"))
     if cohort == "GSE96058":
         return expression_wide_to_samples_by_gene(pd.read_parquet(PROCESSED / "02_gse96058_expression.parquet"))
     if cohort == "METABRIC":

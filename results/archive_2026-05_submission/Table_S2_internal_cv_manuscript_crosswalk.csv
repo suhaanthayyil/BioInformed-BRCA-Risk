@@ -1,0 +1,7 @@
+model,submitted_manuscript_cindex,repository_exact_cindex,repository_delta_vs_cox,source,status,note
+Cox_PH,0.600,0.599862,0.000000,results/Table_S2_ml_internal_cv.csv,match_after_rounding,Manuscript value matches repository after rounding.
+Elastic_Net_Cox,0.611,0.601334,0.001472,results/Table_S2_ml_internal_cv.csv,repository_exact_authoritative,Submitted manuscript reports a rounded summary value; exact reproducible value is the repository value.
+Random_Survival_Forest,0.616,0.600705,0.000843,results/Table_S2_ml_internal_cv.csv,repository_exact_authoritative,Submitted manuscript reports a rounded summary value; exact reproducible value is the repository value.
+Gradient_Boosted_Survival,0.642,0.641826,0.041964,results/Table_S2_ml_internal_cv.csv,match_after_rounding,Headline value matches repository after rounding.
+DeepSurv,0.622,0.609042,0.009181,results/Table_S2_ml_internal_cv.csv,repository_exact_authoritative,Submitted manuscript reports a rounded summary value; exact reproducible value is the repository value.
+Stacked_Ensemble,0.628,0.626274,0.026412,results/Table_S2_ml_internal_cv.csv,near_match_after_rounding,Submitted manuscript value is within 0.002 of repository exact value.

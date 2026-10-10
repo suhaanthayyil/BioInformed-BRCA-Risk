@@ -22,12 +22,15 @@ https://ftp.ncbi.nlm.nih.gov/geo/series/GSE96nnn/GSE96058/suppl/GSE96058_gene_ex
 
 ## TCGA-BRCA
 
-**Source:** [GDC Data Portal](https://portal.gdc.cancer.gov)
+**Source:** UCSC Xena TCGA hub (`TCGA.BRCA.sampleMap/HiSeqV2`, `BRCA_clinicalMatrix`) and TCGA-CDR survival (`survival/BRCA_survival.txt`), downloaded by `download_data.sh` into `data/raw/tcga/`.
 
-- Project: TCGA-BRCA (Breast Invasive Carcinoma)
-- Data type: RNA-seq gene expression (HTSeq-FPKM, log2 RSEM normalized)
-- The preprocessed TCGA feature matrix is provided in `data/processed/02_tcga_feature_matrix.csv`
+- Expression: log2(RSEM normalized count + 1), 20,530 genes
+- Parsed by `scripts/ingest_raw.py` into `data/processed/01_tcga_expression.parquet` and `data/clinical/tcga_brca_clinical.csv`
+
+## GSE96058 clinical
+
+The two GEO series matrices (`GSE96058-GPL11154`, `GSE96058-GPL18573`) are downloaded into `data/raw/gse96058/` and parsed by `scripts/ingest_raw.py` into `data/clinical/gse96058_clinical.csv` (3,273 patients, replicates removed).
 
 ## Clinical Data
 
-Clinical metadata for both cohorts is provided in `data/clinical/` and is small enough to include in the repository.
+The legacy v1 (preprint) cohort files are in `data/legacy_v1_preprint/` (see its README).

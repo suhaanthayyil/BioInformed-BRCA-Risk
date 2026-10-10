@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-16T13:11:08-04:00",
+  "generated_at": "2026-10-03T17:36:42-04:00",
   "bootstrap_iterations": 1000,
   "seed": 42,
   "score_files": {
@@ -10,5 +10,5 @@
   },
   "metric_file": "results/Table_S1_clinical_baselines.csv",
   "surrogate_policy": "No proprietary assay score was fabricated; unavailable exact formulas are labeled unavailable.",
-  "pam50_policy": "Official genefu::rorS is preferred; subtype-risk surrogate retained only as fallback/comparison."
+  "pam50_policy": "genefu::rorS (research implementation of PAM50 ROR-S) is preferred; subtype-risk surrogate retained only as fallback/comparison."
 }

@@ -13,6 +13,7 @@ from pathlib import Path
 
 import duckdb
 import pandas as pd
+import pyarrow.parquet as pq
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -76,85 +77,66 @@ def _empty_frame(columns: list[str]) -> pd.DataFrame:
 
 
 def load_tcga() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    clinical = pd.read_csv(CLINICAL / "01_tcga_clinical.csv")
-    sample_id = clinical.get("sample_id", clinical.get("sampleID")).astype(str)
-    er = clinical.get("ER_Status_nature2012", pd.Series(index=clinical.index, dtype=object)).map(_norm_status)
-    pr = clinical.get("PR_Status_nature2012", pd.Series(index=clinical.index, dtype=object)).map(_norm_status)
-    her2 = clinical.get("HER2_Final_Status_nature2012", pd.Series(index=clinical.index, dtype=object)).map(_norm_status)
-
+    clinical = pd.read_csv(CLINICAL / "tcga_brca_clinical.csv")
+    sample_id = clinical["sample_id"].astype(str)
+    er = clinical["er_status"].map(_norm_status)
+    pr = clinical["pr_status"].map(_norm_status)
+    her2 = clinical["her2_status"].map(_norm_status)
     samples = pd.DataFrame(
         {
             "sample_id": sample_id,
             "cohort": "TCGA-BRCA",
-            "patient_id": clinical.get("_PATIENT", sample_id.str[:12]),
-            "age_at_dx": pd.to_numeric(
-                clinical.get(
-                    "age_at_initial_pathologic_diagnosis",
-                    clinical.get("Age_at_Initial_Pathologic_Diagnosis_nature2012"),
-                ),
-                errors="coerce",
-            ),
-            "sex": clinical.get("Gender_nature2012", clinical.get("gender")),
-            "race": clinical.get("race"),
-            "ethnicity": clinical.get("ethnicity"),
-            "stage_tnm": clinical.get("Converted_Stage_nature2012", clinical.get("pathologic_stage")),
-            "grade": clinical.get("neoplasm_histologic_grade"),
+            "patient_id": clinical["patient_id"].astype(str),
+            "age_at_dx": pd.to_numeric(clinical["age_at_dx"], errors="coerce"),
+            "sex": clinical["sex"],
+            "race": None,
+            "ethnicity": None,
+            "stage_tnm": clinical["stage_tnm"],
+            "grade": None,
             "er_status": er,
             "pr_status": pr,
             "her2_status": her2,
-            "intrinsic_subtype_pam50_published": clinical.get("pam50_subtype", clinical.get("PAM50Call_RNAseq")),
+            "intrinsic_subtype_pam50_published": clinical["pam50_published"],
             "tnbc_flag": _tnbc(er, pr, her2),
-            "primary_site": clinical.get("_primary_site", "Breast"),
+            "primary_site": "Breast",
             "treatment_summary": None,
         }
     )
-
-    os_days = pd.to_numeric(clinical.get("time_to_event"), errors="coerce") * 30.4375
-    if os_days.isna().all() and "OS_Time_nature2012" in clinical:
-        os_days = pd.to_numeric(clinical["OS_Time_nature2012"], errors="coerce")
     survival = pd.DataFrame(
         {
             "sample_id": sample_id,
-            "os_days": os_days,
-            "os_event": pd.to_numeric(clinical.get("event_status", clinical.get("OS_event_nature2012")), errors="coerce"),
-            "dfs_days": pd.Series(pd.NA, index=clinical.index, dtype="Float64"),
-            "dfs_event": pd.Series(pd.NA, index=clinical.index, dtype="Float64"),
-            "last_followup_days": os_days,
+            "os_days": pd.to_numeric(clinical["os_days"], errors="coerce"),
+            "os_event": pd.to_numeric(clinical["os_event"], errors="coerce"),
+            "dfs_days": pd.to_numeric(clinical["pfi_days"], errors="coerce"),
+            "dfs_event": pd.to_numeric(clinical["pfi_event"], errors="coerce"),
+            "last_followup_days": pd.to_numeric(clinical["os_days"], errors="coerce"),
         }
     )
-
-    qc = pd.DataFrame(
-        {
-            "sample_id": sample_id,
-            "expression_qc_flag": False,
-            "clinical_qc_flag": survival["os_days"].notna() & survival["os_event"].notna(),
-            "retained_in_analysis_flag": survival["os_days"].notna() & survival["os_event"].notna(),
-            "qc_note": "TCGA clinical harmonized; expression CSV lacks explicit sample_id column in current repo.",
-        }
-    )
+    qc = _qc(sample_id, survival, True, "Primary tumour RNA-seq (Xena HiSeqV2), TCGA-CDR overall survival.")
     return samples[SAMPLE_COLUMNS], survival[SURVIVAL_COLUMNS], qc
 
 
 def load_gse96058() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    clinical = pd.read_csv(CLINICAL / "01_gse96058_clinical.csv")
+    clinical = pd.read_csv(CLINICAL / "gse96058_clinical.csv")
+    sample_id = clinical["sample_id"].astype(str)
     er = clinical["er_status"].map(_norm_status)
     pr = clinical["pgr_status"].map(_norm_status)
     her2 = clinical["her2_status"].map(_norm_status)
     samples = pd.DataFrame(
         {
-            "sample_id": clinical["sample_id"].astype(str),
+            "sample_id": sample_id,
             "cohort": "GSE96058",
-            "patient_id": clinical["sample_id"].astype(str),
+            "patient_id": sample_id,
             "age_at_dx": pd.to_numeric(clinical["age_at_diagnosis"], errors="coerce"),
             "sex": "Female",
             "race": None,
             "ethnicity": None,
             "stage_tnm": None,
-            "grade": clinical.get("nhg"),
+            "grade": clinical["nhg"],
             "er_status": er,
             "pr_status": pr,
             "her2_status": her2,
-            "intrinsic_subtype_pam50_published": clinical.get("pam50_subtype"),
+            "intrinsic_subtype_pam50_published": clinical["pam50_subtype"],
             "tnbc_flag": _tnbc(er, pr, her2),
             "primary_site": "Breast",
             "treatment_summary": clinical[["endocrine_treated", "chemo_treated"]].astype(str).agg("; ".join, axis=1),
@@ -162,24 +144,31 @@ def load_gse96058() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     )
     survival = pd.DataFrame(
         {
-            "sample_id": clinical["sample_id"].astype(str),
-            "os_days": pd.to_numeric(clinical["overall_survival_days"], errors="coerce"),
-            "os_event": pd.to_numeric(clinical["overall_survival_event"], errors="coerce"),
+            "sample_id": sample_id,
+            "os_days": pd.to_numeric(clinical["os_days"], errors="coerce"),
+            "os_event": pd.to_numeric(clinical["os_event"], errors="coerce"),
             "dfs_days": pd.Series(pd.NA, index=clinical.index, dtype="Float64"),
             "dfs_event": pd.Series(pd.NA, index=clinical.index, dtype="Float64"),
-            "last_followup_days": pd.to_numeric(clinical["overall_survival_days"], errors="coerce"),
+            "last_followup_days": pd.to_numeric(clinical["os_days"], errors="coerce"),
         }
     )
-    qc = pd.DataFrame(
-        {
-            "sample_id": clinical["sample_id"].astype(str),
-            "expression_qc_flag": True,
-            "clinical_qc_flag": survival["os_days"].notna() & survival["os_event"].notna(),
-            "retained_in_analysis_flag": survival["os_days"].notna() & survival["os_event"].notna(),
-            "qc_note": "SCAN-B expression and clinical metadata available.",
-        }
-    )
+    qc = _qc(sample_id, survival, True, "All non-replicate SCAN-B samples with OS in the GEO release.")
     return samples[SAMPLE_COLUMNS], survival[SURVIVAL_COLUMNS], qc
+
+
+def _qc(sample_id: pd.Series, survival: pd.DataFrame, expression: bool, note: str) -> pd.DataFrame:
+    valid = survival["os_days"].notna() & survival["os_event"].notna()
+    legacy = set(pd.read_csv(CLINICAL / "legacy_v1_cohort_ids.csv")["sample_id"].astype(str))
+    return pd.DataFrame(
+        {
+            "sample_id": sample_id,
+            "expression_qc_flag": expression,
+            "clinical_qc_flag": valid,
+            "retained_in_analysis_flag": valid,
+            "in_legacy_v1_cohort": sample_id.isin(legacy),
+            "qc_note": note,
+        }
+    )
 
 
 def load_metabric() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
@@ -214,15 +203,7 @@ def load_metabric() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
             "last_followup_days": pd.to_numeric(clinical["os_days"], errors="coerce"),
         }
     )
-    qc = pd.DataFrame(
-        {
-            "sample_id": clinical["sample_id"].astype(str),
-            "expression_qc_flag": True,
-            "clinical_qc_flag": survival["os_days"].notna() & survival["os_event"].notna(),
-            "retained_in_analysis_flag": survival["os_days"].notna() & survival["os_event"].notna(),
-            "qc_note": "METABRIC expression z-scores and clinical metadata available.",
-        }
-    )
+    qc = _qc(clinical["sample_id"].astype(str), survival, True, "METABRIC expression z-scores and clinical metadata available.")
     return samples[SAMPLE_COLUMNS], survival[SURVIVAL_COLUMNS], qc
 
 
@@ -258,15 +239,7 @@ def load_gse20685() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
             "last_followup_days": pd.to_numeric(clinical["os_days"], errors="coerce"),
         }
     )
-    qc = pd.DataFrame(
-        {
-            "sample_id": clinical["sample_id"].astype(str),
-            "expression_qc_flag": True,
-            "clinical_qc_flag": survival["os_days"].notna() & survival["os_event"].notna(),
-            "retained_in_analysis_flag": survival["os_days"].notna() & survival["os_event"].notna(),
-            "qc_note": "GSE20685 has expression and OS metadata; receptor status unavailable, TNBC excluded.",
-        }
-    )
+    qc = _qc(clinical["sample_id"].astype(str), survival, True, "GSE20685 has expression and OS metadata; receptor status unavailable, TNBC excluded.")
     return samples[SAMPLE_COLUMNS], survival[SURVIVAL_COLUMNS], qc
 
 
@@ -338,6 +311,7 @@ def build_database() -> dict[str, object]:
     con.execute("CREATE TABLE qc AS SELECT * FROM qc_df")
 
     for view in [
+        "tcga_expression_long",
         "gse96058_expression_long",
         "metabric_expression_long",
         "gse20685_expression_long",
@@ -345,9 +319,19 @@ def build_database() -> dict[str, object]:
     ]:
         con.execute(f"DROP VIEW IF EXISTS {view}")
 
-    gse_cols = pd.read_parquet(PROCESSED / "02_gse96058_expression.parquet").columns.tolist()
-    met_cols = pd.read_parquet(PROCESSED / "03_metabric_expression.parquet").columns.tolist()
-    gse20685_cols = pd.read_parquet(PROCESSED / "04_gse20685_expression.parquet").columns.tolist()
+    tcga_cols = pq.read_schema(PROCESSED / "01_tcga_expression.parquet").names
+    gse_cols = pq.read_schema(PROCESSED / "02_gse96058_expression.parquet").names
+    met_cols = pq.read_schema(PROCESSED / "03_metabric_expression.parquet").names
+    gse20685_cols = pq.read_schema(PROCESSED / "04_gse20685_expression.parquet").names
+    con.execute(
+        _expression_view_sql(
+            "tcga_expression_long",
+            PROCESSED / "01_tcga_expression.parquet",
+            "TCGA-BRCA",
+            ["gene_symbol"],
+            [c for c in tcga_cols if c != "gene_symbol"],
+        )
+    )
     con.execute(
         _expression_view_sql(
             "gse96058_expression_long",
@@ -378,6 +362,8 @@ def build_database() -> dict[str, object]:
     con.execute(
         """
 CREATE OR REPLACE VIEW expression_long AS
+SELECT * FROM tcga_expression_long
+UNION ALL
 SELECT * FROM gse96058_expression_long
 UNION ALL
 SELECT * FROM metabric_expression_long
@@ -426,7 +412,7 @@ def write_report(summary: dict[str, object]) -> None:
         "- `samples`: harmonized sample-level clinical metadata.",
         "- `survival`: harmonized OS/DFS time-to-event fields.",
         "- `qc`: sample-level expression and clinical QC flags.",
-        "- `expression_long`: DuckDB view over external expression parquet files; TCGA expression is excluded because the current repo CSV lacks explicit sample IDs.",
+        "- `expression_long`: DuckDB view over the four expression parquet files.",
         "",
         "## Cohort Summary",
         "",
@@ -434,7 +420,7 @@ def write_report(summary: dict[str, object]) -> None:
         "",
         "## Normalization Notes",
         "",
-        "- TCGA: existing repo-normalized expression file has no explicit sample ID column; `data/processed/02_tcga_feature_matrix.csv` supplies the canonical TCGA sample-ID ordering. The authoritative harmonized pathway features for all cohorts are in `data/processed/04_pathway_features.parquet`.",
+        "- TCGA: UCSC Xena HiSeqV2 log2(RSEM+1), primary tumours only, one sample per patient; OS from TCGA-CDR.",
         "- GSE96058: GEO transformed RNA-seq expression, gene rows by sample columns.",
         "- METABRIC: cBioPortal z-scores relative to diploid samples; not directly commensurate with RNA-seq expression scale.",
         "- GSE20685: Affymetrix GPL570 processed expression, probe-level values collapsed to gene symbols by mean.",

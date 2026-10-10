@@ -11,7 +11,9 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+import patsy
 import pandas as pd
+from lifelines import CoxPHFitter
 from sklearn.linear_model import LogisticRegression
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -26,8 +28,13 @@ from scripts.phase3_common import (  # noqa: E402
     PAM50_MODEL,
     RESULTS,
     SEED,
-    binary_horizon_outcome,
     ci,
+    fit_risk_mapping,
+    horizon_reached,
+    ipcw_horizon,
+    km_risk,
+    predicted_risk,
+    valid_survival_subset,
     ensure_dirs,
     load_predictions,
     log_phase3,
@@ -37,90 +44,105 @@ MODELS = [HEADLINE_MODEL, COX_MODEL, PAM50_MODEL]
 HORIZONS = {5: 5 * 365, 10: 10 * 365}
 
 
-def fit_probability_mapping(train: pd.DataFrame, risk_col: str) -> LogisticRegression | None:
-    df = train.dropna(subset=[risk_col, "horizon_event"])
-    if len(df) < 30 or df["horizon_event"].nunique() < 2:
-        return None
-    model = LogisticRegression(random_state=SEED)
-    model.fit(df[[risk_col]], df["horizon_event"])
-    return model
-
-
-def predict_probability(model: LogisticRegression | None, df: pd.DataFrame, risk_col: str) -> np.ndarray:
-    if model is None:
-        return np.full(len(df), np.nan)
-    return model.predict_proba(df[[risk_col]])[:, 1]
-
-
 def logit(values: np.ndarray) -> np.ndarray:
     clipped = np.clip(values, 1e-4, 1 - 1e-4)
     return np.log(clipped / (1 - clipped))
 
 
-def calibration_stats(y: np.ndarray, p: np.ndarray) -> dict[str, float]:
-    valid = np.isfinite(y) & np.isfinite(p)
-    y = y[valid].astype(int)
-    p = p[valid].astype(float)
-    if len(y) < 30 or len(np.unique(y)) < 2:
-        return {"slope": np.nan, "intercept": np.nan, "calibration_in_large": np.nan, "ici": np.nan}
-    x = logit(p).reshape(-1, 1)
+def smoothed_ici(df: pd.DataFrame, p: np.ndarray, days: float) -> tuple[float, float, float]:
+    x = np.log(-np.log(np.clip(1 - p, 1e-6, 1 - 1e-6)))
+    basis = np.asarray(patsy.dmatrix("cr(x, df=3) - 1", {"x": x}))
+    data = pd.DataFrame(basis, columns=[f"s{i}" for i in range(basis.shape[1])])
+    data["T"] = df["os_days"].to_numpy(float)
+    data["E"] = df["os_event"].to_numpy(int)
+    try:
+        cox = CoxPHFitter(penalizer=1e-4).fit(data, "T", "E")
+    except Exception:
+        return np.nan, np.nan, np.nan
+    observed = 1 - cox.predict_survival_function(data.drop(columns=["T", "E"]), times=[days]).to_numpy().ravel()
+    gap = np.abs(observed - p)
+    return float(gap.mean()), float(np.median(gap)), float(np.quantile(gap, 0.9))
+
+
+def calibration_stats(df: pd.DataFrame, p: np.ndarray, days: float) -> dict[str, float]:
+    keep = np.isfinite(p)
+    df, p = df[keep], p[keep]
+    y, w = ipcw_horizon(df, days)
+    use = w > 0
+    empty = {"slope": np.nan, "intercept": np.nan, "calibration_in_large": np.nan, "ici": np.nan, "e50": np.nan, "e90": np.nan, "decile_error": np.nan}
+    if use.sum() < 30 or len(np.unique(y[use])) < 2:
+        return empty
     cal = LogisticRegression(random_state=SEED)
-    cal.fit(x, y)
-    slope = float(cal.coef_[0][0])
-    intercept = float(cal.intercept_[0])
-    calibration_in_large = float(y.mean() - p.mean())
-    tmp = pd.DataFrame({"y": y, "p": p})
-    tmp["bin"] = pd.qcut(tmp["p"], q=min(10, tmp["p"].nunique()), duplicates="drop")
-    grouped = tmp.groupby("bin", observed=False).agg(obs=("y", "mean"), pred=("p", "mean"), n=("y", "size"))
-    ici = float(np.average(np.abs(grouped["obs"] - grouped["pred"]), weights=grouped["n"]))
-    return {"slope": slope, "intercept": intercept, "calibration_in_large": calibration_in_large, "ici": ici}
+    cal.fit(logit(p[use]).reshape(-1, 1), y[use], sample_weight=w[use])
+    bins = pd.qcut(p, q=min(10, len(np.unique(p))), labels=False, duplicates="drop")
+    gaps, sizes = [], []
+    for b in np.unique(bins):
+        part = df[bins == b]
+        gaps.append(abs(km_risk(part, days) - p[bins == b].mean()))
+        sizes.append(len(part))
+    ici, e50, e90 = smoothed_ici(df, p, days)
+    return {
+        "slope": float(cal.coef_[0][0]),
+        "intercept": float(cal.intercept_[0]),
+        "calibration_in_large": float(km_risk(df, days) - p.mean()),
+        "ici": ici,
+        "e50": e50,
+        "e90": e90,
+        "decile_error": float(np.average(gaps, weights=sizes)),
+    }
 
 
-def bootstrap_stats(y: np.ndarray, p: np.ndarray) -> dict[str, tuple[float, float]]:
+def bootstrap_stats(df: pd.DataFrame, p: np.ndarray, days: float) -> dict[str, tuple[float, float]]:
     rng = np.random.default_rng(SEED)
-    values = {"slope": [], "intercept": [], "calibration_in_large": [], "ici": []}
-    n = len(y)
+    values = {"slope": [], "intercept": [], "calibration_in_large": [], "ici": [], "e50": [], "e90": [], "decile_error": []}
+    n = len(df)
     if n < 30:
         return {key: (np.nan, np.nan) for key in values}
     for _ in range(BOOTSTRAP_ITER):
         idx = rng.integers(0, n, n)
-        stat = calibration_stats(y[idx], p[idx])
+        stat = calibration_stats(df.iloc[idx], p[idx], days)
         for key in values:
             values[key].append(stat[key])
     return {key: ci(vals) for key, vals in values.items()}
 
 
-def calibration_curve_points(y: np.ndarray, p: np.ndarray) -> pd.DataFrame:
-    tmp = pd.DataFrame({"y": y, "p": p}).dropna()
-    if len(tmp) < 30:
+def calibration_curve_points(df: pd.DataFrame, p: np.ndarray, days: float) -> pd.DataFrame:
+    keep = np.isfinite(p)
+    df, p = df[keep], p[keep]
+    if len(df) < 30:
         return pd.DataFrame(columns=["pred", "obs"])
-    tmp["bin"] = pd.qcut(tmp["p"], q=min(10, tmp["p"].nunique()), duplicates="drop")
-    return tmp.groupby("bin", observed=False).agg(pred=("p", "mean"), obs=("y", "mean")).reset_index(drop=True)
+    bins = pd.qcut(p, q=min(10, len(np.unique(p))), labels=False, duplicates="drop")
+    return pd.DataFrame(
+        [{"pred": p[bins == b].mean(), "obs": km_risk(df[bins == b], days)} for b in np.unique(bins)]
+    )
 
 
 def run_analysis() -> tuple[pd.DataFrame, dict[tuple[str, int, str], pd.DataFrame]]:
-    pred = load_predictions()
+    pred = valid_survival_subset(load_predictions(), [])
     rows = []
     curves = {}
+    train = pred[pred["cohort"].eq("TCGA-BRCA")]
+    mappings = {model: fit_risk_mapping(train, model) for model in MODELS}
     for years, days in HORIZONS.items():
-        horizon = binary_horizon_outcome(pred, days)
-        train = horizon[horizon["cohort"].eq("TCGA-BRCA")].copy()
-        mappings = {model: fit_probability_mapping(train, model) for model in MODELS}
         for cohort in ALL_COHORTS:
-            cohort_df = horizon[horizon["cohort"].eq(cohort)].copy()
+            cohort_df = pred[pred["cohort"].eq(cohort)].copy()
+            if not horizon_reached(cohort_df, days):
+                log_phase3(f"Calibration skipped {cohort} {years}y: follow-up does not reach the horizon.")
+                continue
             for model in MODELS:
-                probs = predict_probability(mappings[model], cohort_df, model)
-                y = cohort_df["horizon_event"].to_numpy(int)
-                stat = calibration_stats(y, probs)
-                boot = bootstrap_stats(y, probs)
-                curves[(cohort, years, model)] = calibration_curve_points(y, probs)
+                sub = cohort_df[cohort_df[model].notna()]
+                probs = predicted_risk(mappings[model], sub, model, days)
+                stat = calibration_stats(sub, probs, days)
+                boot = bootstrap_stats(sub, probs, days)
+                curves[(cohort, years, model)] = calibration_curve_points(sub, probs, days)
                 rows.append(
                     {
                         "cohort": cohort,
                         "model": model,
                         "time_horizon": f"{years}y",
-                        "n": len(cohort_df),
-                        "events": int(cohort_df["horizon_event"].sum()) if len(cohort_df) else 0,
+                        "n": len(sub),
+                        "events_by_horizon": int(((sub["os_event"] == 1) & (sub["os_days"] <= days)).sum()),
+                        "observed_km_risk": km_risk(sub, days),
                         "slope": stat["slope"],
                         "slope_ci_low": boot["slope"][0],
                         "slope_ci_high": boot["slope"][1],
@@ -133,6 +155,12 @@ def run_analysis() -> tuple[pd.DataFrame, dict[tuple[str, int, str], pd.DataFram
                         "ici": stat["ici"],
                         "ici_ci_low": boot["ici"][0],
                         "ici_ci_high": boot["ici"][1],
+                        "e50": stat["e50"],
+                        "e90": stat["e90"],
+                        "decile_error": stat["decile_error"],
+                        "decile_error_ci_low": boot["decile_error"][0],
+                        "decile_error_ci_high": boot["decile_error"][1],
+                        "ici_method": "Austin 2020: Cox with restricted cubic spline of cloglog(predicted risk)",
                     }
                 )
     return pd.DataFrame(rows), curves
@@ -145,6 +173,8 @@ def plot_calibration(curves: dict[tuple[str, int, str], pd.DataFrame]) -> None:
         for col, cohort in enumerate(ALL_COHORTS):
             ax = axes[row, col]
             ax.plot([0, 1], [0, 1], color="black", lw=1, ls=":")
+            if not any((cohort, years, m) in curves for m in MODELS):
+                ax.text(0.5, 0.5, "follow-up does not\nreach horizon", ha="center", va="center", fontsize=8)
             for model in MODELS:
                 pts = curves.get((cohort, years, model), pd.DataFrame())
                 if not pts.empty:

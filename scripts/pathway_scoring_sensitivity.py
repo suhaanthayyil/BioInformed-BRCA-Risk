@@ -2,13 +2,12 @@
 """Task 3: Pathway-scoring sensitivity analysis (Table S14).
 
 Compare three aggregation methods (rank-percentile, mean-z, ssGSEA)
-with locked GBSA architecture. Each method produces 7 pathway features,
+with the headline model configuration. Each method produces 7 pathway features,
 trains on TCGA, and evaluates on 3 external cohorts.
 """
 
 from __future__ import annotations
 
-import json
 import sys
 from pathlib import Path
 
@@ -18,12 +17,12 @@ import pandas as pd
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-from sksurv.ensemble import GradientBoostingSurvivalAnalysis
-from sksurv.util import Surv
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
+from src.clinical import stage_to_ordinal  # noqa: E402
+from src.ml import registry  # noqa: E402
 from src.pathways import (  # noqa: E402
     KEGG_KEYWORDS,
     REACTOME_KEYWORDS,
@@ -49,7 +48,8 @@ GENE_SETS_DIR = DATA / "raw" / "gene_sets"
 RESULTS = REPO_ROOT / "results"
 SEED = 42
 BOOTSTRAP_ITER = 1000
-PAM50 = "PAM50_ROR_official"
+PAM50 = "PAM50_RORS_genefu"
+HEADLINE = registry.headline_name()
 MSIGDB_VERSION = "v2024.1.Hs"
 EXTERNAL_COHORTS = ["GSE96058", "METABRIC", "GSE20685"]
 
@@ -64,27 +64,12 @@ PATHWAY_FEATURES = [
 ]
 
 
-def stage_to_ordinal(value) -> float:
-    text = "" if pd.isna(value) else str(value).upper()
-    if "IV" in text:
-        return 4.0
-    if "III" in text:
-        return 3.0
-    if "II" in text:
-        return 2.0
-    if "I" in text:
-        return 1.0
-    return np.nan
-
-
 def make_preprocessor() -> Pipeline:
     return Pipeline([("imputer", SimpleImputer(strategy="median")), ("scaler", StandardScaler())])
 
 
-def get_locked_gbsa_config() -> dict:
-    cv_table = pd.read_csv(RESULTS / "Table_S2_ml_internal_cv.csv")
-    gbsa_row = cv_table[cv_table["model"] == "Gradient_Boosted_Survival"].iloc[0]
-    return json.loads(gbsa_row["config"])
+def headline_config() -> dict:
+    return registry.selected_config(HEADLINE)
 
 
 def build_gene_sets() -> dict[str, list[str]]:
@@ -107,18 +92,7 @@ def build_gene_sets() -> dict[str, list[str]]:
 
 def load_expression(cohort: str) -> pd.DataFrame:
     if cohort == "TCGA-BRCA":
-        expr = pd.read_csv(DATA / "01_tcga_expression_normalized.csv")
-        feature_matrix = pd.read_csv(PROCESSED / "02_tcga_feature_matrix.csv")
-        if "sample_id" in expr.columns:
-            expr = expr.set_index(expr["sample_id"].astype(str)).drop(columns=["sample_id"])
-            expr.index.name = "sample_id"
-            expr = expr.reindex(feature_matrix["sample_id"].astype(str))
-            expr.columns = [str(c).upper() for c in expr.columns]
-            return expr.apply(pd.to_numeric, errors="coerce").astype("float32")
-        expr.index = feature_matrix["sample_id"].astype(str)
-        expr.index.name = "sample_id"
-        expr.columns = [str(c).upper() for c in expr.columns]
-        return expr.astype("float32")
+        return expression_wide_to_samples_by_gene(pd.read_parquet(PROCESSED / "01_tcga_expression.parquet"))
     if cohort == "GSE96058":
         return expression_wide_to_samples_by_gene(pd.read_parquet(PROCESSED / "02_gse96058_expression.parquet"))
     if cohort == "METABRIC":
@@ -231,9 +205,9 @@ SCORING_METHODS = {
 def main() -> None:
     np.random.seed(SEED)
     gene_sets = build_gene_sets()
-    config = get_locked_gbsa_config()
+    config = headline_config()
     clinical = load_clinical()
-    print(f"Locked GBSA config: {config}")
+    print(f"{HEADLINE} config: {config}")
     print(f"Gene sets loaded: {len(gene_sets)}")
 
     # Load PAM50 scores for delta computation
@@ -241,7 +215,7 @@ def main() -> None:
         ["sample_id", PAM50]
     ]
 
-    full_features = PATHWAY_FEATURES + ["age_at_dx", "stage_ordinal"]
+    full_features = list(PATHWAY_FEATURES)
     rows = []
 
     for method_name, scoring_fn in SCORING_METHODS.items():
@@ -290,14 +264,11 @@ def main() -> None:
         x_train = pre.fit_transform(train[available_feats])
         t_train = train["os_days"].to_numpy(float)
         e_train = train["os_event"].to_numpy(bool)
-        y_train = Surv.from_arrays(e_train, t_train)
+        model = registry.make_estimator(HEADLINE, config)
+        model.fit(x_train, t_train, e_train)
 
-        gbsa = GradientBoostingSurvivalAnalysis(random_state=SEED, **config)
-        gbsa.fit(x_train, y_train)
-
-        # Internal CV C-index (quick sanity check)
         from sksurv.metrics import concordance_index_censored
-        train_risk = gbsa.predict(x_train)
+        train_risk = np.asarray(model.predict(x_train), dtype=float).ravel()
         train_c = float(concordance_index_censored(e_train, t_train, train_risk)[0])
         print(f"  Training C-index (resubstitution): {train_c:.4f}")
 
@@ -307,7 +278,7 @@ def main() -> None:
             if len(cdf) == 0:
                 continue
             x_test = pre.transform(cdf[available_feats])
-            cdf["method_risk"] = gbsa.predict(x_test).astype(float)
+            cdf["method_risk"] = model.predict(x_test).astype(float)
             cdf = cdf.merge(pam50_scores, on="sample_id", how="left")
 
             valid = cdf[

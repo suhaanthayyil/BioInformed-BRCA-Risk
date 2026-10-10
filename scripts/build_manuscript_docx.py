@@ -51,14 +51,8 @@ def _set_font(run, size: int, *, bold: bool = False, superscript: bool = False) 
         run.font.superscript = True
 
 
-def _rewrite_title_block(docx_path: Path) -> None:
+def _rewrite_title_block(docx_path: Path, title: str) -> None:
     doc = Document(docx_path)
-
-    title = (
-        "Pathway-based machine learning is competitive with but does not exceed "
-        "PAM50-ROR for breast cancer prognosis: a pre-registered multi-cohort "
-        "benchmark in 4,532 patients"
-    )
 
     p0 = doc.paragraphs[0]
     _clear_paragraph(p0)
@@ -101,6 +95,7 @@ def main() -> None:
     parser.add_argument("--tex", default="paper/main.tex")
     parser.add_argument("--bib", default="paper/main.bib")
     parser.add_argument("--out", default="paper/main.docx")
+    parser.add_argument("--title", required=True)
     args = parser.parse_args()
 
     tex_path = ROOT / args.tex
@@ -108,7 +103,7 @@ def main() -> None:
     docx_path = ROOT / args.out
 
     _run_pandoc(tex_path, bib_path, docx_path)
-    _rewrite_title_block(docx_path)
+    _rewrite_title_block(docx_path, args.title)
     print(f"Wrote {docx_path}")
 
 

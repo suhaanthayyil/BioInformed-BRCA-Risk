@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -20,14 +21,12 @@ from scripts.phase3_common import (  # noqa: E402
     FIGURES,
     HEADLINE_MODEL,
     PAM50_MODEL,
+    PROCESSED,
     RESULTS,
     ensure_dirs,
     log_phase3,
 )
 from src.meta import random_effects_from_ci  # noqa: E402
-
-LOCKED_TNBC = {"delta": 0.0144, "ci_low": -0.0472, "ci_high": 0.0760, "p": 0.6466, "i2": 0.1053, "tau2": 0.00045}
-
 
 def subset_rows(table: pd.DataFrame, subgroup: str) -> tuple[pd.DataFrame, dict]:
     rows = table[
@@ -37,15 +36,8 @@ def subset_rows(table: pd.DataFrame, subgroup: str) -> tuple[pd.DataFrame, dict]
     ].copy()
     rows = rows.rename(columns={"delta_cindex": "delta_vs_pam50", "ci_low": "delta_ci_low", "ci_high": "delta_ci_high"})
     if subgroup == "tnbc":
-        meta = {
-            "n_studies": len(rows),
-            "effect": LOCKED_TNBC["delta"],
-            "ci_low": LOCKED_TNBC["ci_low"],
-            "ci_high": LOCKED_TNBC["ci_high"],
-            "p": LOCKED_TNBC["p"],
-            "i2": LOCKED_TNBC["i2"],
-            "tau2": LOCKED_TNBC["tau2"],
-        }
+        primary = json.loads((PROCESSED / "phase6_primary_endpoint.json").read_text())
+        meta = {k.removeprefix("meta_"): v for k, v in primary.items() if k.startswith("meta_")}
     else:
         meta = random_effects_from_ci(rows, "delta_vs_pam50", "delta_ci_low", "delta_ci_high")
     return rows, meta
@@ -57,53 +49,45 @@ def draw_panel(
     meta: dict,
     title: str,
     primary_note: str | None = None,
-    n_overrides: dict[str, int] | None = None,
 ) -> None:
     # Plot only evaluable cohorts (drop rows without a computable delta/CI, e.g.
     # GSE20685 in the TNBC panel, which lacks receptor-status annotation).
     rows = rows.dropna(subset=["delta_vs_pam50", "delta_ci_low", "delta_ci_high"]).sort_values("cohort")
     y_positions = np.arange(len(rows), 0, -1)
-    # Adaptive x-range: span the full data (incl. the pooled estimate) so no CI
-    # whisker is clipped; reserve left/right margins for the label columns.
     lows = [*rows["delta_ci_low"].tolist(), meta["ci_low"]]
     highs = [*rows["delta_ci_high"].tolist(), meta["ci_high"]]
     dmin, dmax = min(lows), max(highs)
-    center, half = (dmin + dmax) / 2.0, max((dmax - dmin) / 2.0, 0.05)
-    xlo, xhi = center - 2.0 * half, center + 2.0 * half  # data occupies the middle ~50%
-    label_x, value_x = xlo + 0.02 * (xhi - xlo), xhi - 0.02 * (xhi - xlo)
+    pad = 0.1 * (dmax - dmin)
+    labels, values = [], []
     for y, (_, row) in zip(y_positions, rows.iterrows(), strict=False):
         x, low, high = row["delta_vs_pam50"], row["delta_ci_low"], row["delta_ci_high"]
         ax.errorbar(x, y, xerr=[[x - low], [high - x]], fmt="o", color="#31688e", capsize=3)
-        events = int(row["events"]) if "events" in row and np.isfinite(row["events"]) else 0
-        # Display the C-index-evaluable n. In METABRIC TNBC one sample with a
-        # non-positive survival time is not evaluable for the C-index, so the
-        # analysed count (319) is one below the characteristics count (320).
-        n_disp = (n_overrides or {}).get(row["cohort"], int(row["n"]))
-        ax.text(label_x, y, f"{row['cohort']} (n={n_disp}, e={events})", ha="left", va="center", fontsize=8)
-        ax.text(value_x, y, f"{x:+.3f} [{low:+.3f}, {high:+.3f}]", ha="right", va="center", fontsize=8)
-    total_events = int(rows["events"].fillna(0).sum()) if "events" in rows else 0
+        events = int(row["events"]) if np.isfinite(row["events"]) else 0
+        name = f"{row['cohort']} (out-of-fold)" if row["cohort"] == "TCGA-BRCA" else row["cohort"]
+        labels.append(f"{name}\nn={int(row['n']):,}, deaths={events:,}")
+        values.append(f"{x:+.3f} [{low:+.3f}, {high:+.3f}]")
+    total_events = int(rows["events"].fillna(0).sum())
     effect, low, high = meta["effect"], meta["ci_low"], meta["ci_high"]
     ax.errorbar(effect, 0, xerr=[[effect - low], [high - effect]], fmt="D", color="#440154", capsize=4)
-    ax.text(label_x, 0, f"Pooled (random-effects, e={total_events})", ha="left", va="center", fontsize=8, fontweight="bold")
-    ax.text(value_x, 0, f"{effect:+.3f} [{low:+.3f}, {high:+.3f}]", ha="right", va="center", fontsize=8)
+    labels.append(f"Pooled (random effects)\ndeaths={total_events:,}")
+    values.append(f"{effect:+.3f} [{low:+.3f}, {high:+.3f}]")
     ax.axvline(0, color="black", lw=1)
-    ax.axvline(0.03, color="#d62728", ls="--", lw=0.9)  # pre-registered +0.03 superiority margin
-    ax.text(0.03, len(rows) + 0.55, "+0.03 margin", color="#d62728", ha="center", va="bottom", fontsize=7)
-    ax.set_xlim(xlo, xhi)
-    ax.set_ylim(-0.8, len(rows) + 1.1)
-    ax.set_yticks([])
-    ax.set_xticks([t for t in np.round(np.arange(-0.3, 0.41, 0.1), 1) if dmin - 0.02 <= t <= dmax + 0.02])
-    ax.set_title(title, loc="left", fontsize=10, fontweight="bold")
-    ax.set_xlabel("Delta C-index, pathway ML minus PAM50-ROR")
-    p_text = f"p={meta['p']:.4f}" if np.isfinite(meta.get("p", np.nan)) else "p=NA"
+    ax.axvline(0.03, color="#d62728", ls="--", lw=0.9, label="+0.03 registered margin")
+    ax.set_xlim(dmin - pad, dmax + pad)
+    ax.set_ylim(-0.7, len(rows) + 0.7)
+    ticks = [*y_positions, 0]
+    ax.set_yticks(ticks)
+    ax.set_yticklabels(labels, fontsize=8)
+    ax.get_yticklabels()[-1].set_fontweight("bold")
+    for y, text in zip(ticks, values, strict=True):
+        ax.text(1.02, y, text, transform=ax.get_yaxis_transform(), ha="left", va="center", fontsize=8)
+    ax.set_xlabel("Delta C-index, pathway ML minus genefu PAM50 ROR-S")
+    p_text = f"p = {meta['p']:.3f}" if np.isfinite(meta.get("p", np.nan)) else "p = NA"
     i2, tau2 = meta.get("i2", np.nan), meta.get("tau2", np.nan)
-    heterogeneity = (
-        f"I2={100 * i2:.1f}%, tau2={tau2:.4f}" if np.isfinite(i2) and np.isfinite(tau2) else "I2=NA, tau2=NA"
-    )
-    note = f"{p_text}; {heterogeneity}"
-    if primary_note:
-        note = f"{note}\n{primary_note}"
-    ax.text(0.02, 0.97, note, transform=ax.transAxes, ha="left", va="top", fontsize=8)
+    het = f"I2 = {100 * i2:.0f}%, tau2 = {tau2:.4f}" if np.isfinite(i2) and np.isfinite(tau2) else "I2 = NA"
+    subtitle = f"{p_text}; {het}" + (f"\n{primary_note}" if primary_note else "")
+    ax.set_title(f"{title}\n{subtitle}", loc="left", fontsize=9)
+    ax.legend(loc="lower right", fontsize=7, frameon=False)
     ax.grid(axis="x", alpha=0.2)
 
 
@@ -113,17 +97,16 @@ def main() -> None:
     table = pd.read_csv(RESULTS / "Table_2_head_to_head.csv")
     overall_rows, overall_meta = subset_rows(table, "overall")
     tnbc_rows, tnbc_meta = subset_rows(table, "tnbc")
-    fig, axes = plt.subplots(1, 2, figsize=(13, 4.8))
-    # METABRIC overall: one sample with a non-positive survival time is excluded
-    # from the C-index, so the analysed n is 1,979 (matches Table 3), not 1,980.
-    draw_panel(axes[0], overall_rows, overall_meta, "A. Overall cohort", n_overrides={"METABRIC": 1979})
+    fig, axes = plt.subplots(1, 2, figsize=(15, 5.4))
+    primary = json.loads((PROCESSED / "phase6_primary_endpoint.json").read_text())
+    status = "MET" if primary["met"] else "NOT MET"
+    draw_panel(axes[0], overall_rows, overall_meta, "A. Overall cohort")
     draw_panel(
         axes[1],
         tnbc_rows,
         tnbc_meta,
         "B. TNBC subgroup",
-        "Pre-registered primary endpoint. Result: NOT MET.\nGSE20685 lacked receptor status and is not evaluable for TNBC.",
-        n_overrides={"METABRIC": 319},
+        f"Primary endpoint: {status}. GSE20685 has no receptor status.",
     )
     fig.tight_layout()
     fig.savefig(FIGURES / "fig_main_forest.pdf")

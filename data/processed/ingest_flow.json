@@ -1,0 +1,53 @@
+{
+  "TCGA-BRCA": {
+    "source": "UCSC Xena TCGA.BRCA.sampleMap/HiSeqV2 + TCGA-CDR survival",
+    "rnaseq_samples": 1218,
+    "primary_tumour_samples": 1097,
+    "unique_patients": 1097,
+    "excluded_male_or_sex_missing": 14,
+    "excluded_redacted": 5,
+    "excluded_missing_or_zero_os": 14,
+    "included": 1064,
+    "events": 150,
+    "expression_genes": 20530,
+    "sha256": {
+      "HiSeqV2.gz": "263bf67245cc4b9062676583c0ff0306f08471a26aafd5504037e1da22133746",
+      "BRCA_clinicalMatrix": "39eb3be0fb86e6a577bd2cc01502a7fa5a271e1e1cba294e9dc644ad99580d7f",
+      "BRCA_survival.txt": "6c9e18ae9c2b8bacc48cd5a60cde97e8880ae2e84e48df437a0378b17e659b73"
+    }
+  },
+  "GSE96058": {
+    "source": "GEO GSE96058 series matrices (GPL11154, GPL18573)",
+    "geo_samples": 3409,
+    "excluded_technical_replicates": 136,
+    "unique_patients": 3273,
+    "excluded_missing_or_zero_os": 0,
+    "excluded_no_expression": 0,
+    "included": 3273,
+    "events": 336,
+    "expression_genes": 30865,
+    "sha256": {
+      "GSE96058_gene_expression_3273_samples_and_136_replicates_transformed.csv.gz": "3c717baf7960e1f1477a72744a399a42fabba113c9e7ecb3d55997574d7e9732",
+      "GSE96058-GPL11154_series_matrix.txt.gz": "47e4e488911f688a9c9ac7a0bb1223a22259ca1dcae2a1a7501ae5b5e55794ce",
+      "GSE96058-GPL18573_series_matrix.txt.gz": "d7a77604b78dc01235ebee55e39aceb4ff24ecae4fd540e3fa2a773ddb8be091"
+    }
+  },
+  "METABRIC": {
+    "expression_genes": 20603,
+    "expression_samples": 1980,
+    "sha256": {
+      "brca_metabric.tar.gz": "6d4683477d6b37a2d7edbedc0df610f67bc456f99e5e1bef6219f37b633a55f7",
+      "data_clinical_patient.txt": "2a6bbadc6e4b2b07c0505559d438da959fc5c9aba55c7194abc394e2d6454995",
+      "data_clinical_sample.txt": "9a2291e065e2a0a5337b4eaeb09836e70b1bc3e1ed17714a013b53515697e6dc"
+    },
+    "clinical_rows": 2509
+  },
+  "GSE20685": {
+    "clinical_rows": 327,
+    "expression_genes": 22189,
+    "sha256": {
+      "GSE20685_series_matrix.txt.gz": "e818a4d5834e20bbcf01de515caf856c394abb36a02b9cccc95be05c22d0a279",
+      "GPL570.annot.gz": "d7cd44352127b1e34f3a720ebea86093ef255a38f1612a85a2962b71bde8f394"
+    }
+  }
+}

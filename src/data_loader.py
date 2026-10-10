@@ -17,7 +17,7 @@ import os
 import pandas as pd
 
 
-def load_tcga_feature_matrix(path="data/processed/02_tcga_feature_matrix.csv"):
+def load_tcga_feature_matrix(path="data/legacy_v1_preprint/02_tcga_feature_matrix.csv"):
     """
     Load the preprocessed TCGA-BRCA feature matrix.
 
@@ -30,7 +30,7 @@ def load_tcga_feature_matrix(path="data/processed/02_tcga_feature_matrix.csv"):
     if not os.path.exists(path):
         raise FileNotFoundError(
             f"TCGA feature matrix not found at {path}. "
-            "Ensure data/processed/02_tcga_feature_matrix.csv exists."
+            "Ensure data/legacy_v1_preprint/02_tcga_feature_matrix.csv exists."
         )
     df = pd.read_csv(path)
     print(f"Loaded TCGA feature matrix: {df.shape[0]} samples, {df.shape[1]} columns")

@@ -1,0 +1,70 @@
+{
+  "TCGA-BRCA": {
+    "source": "Primary-tumour RNA-seq\n(UCSC Xena / TCGA-CDR)\nn = 1,097 patients",
+    "excluded": [
+      [
+        "male or sex missing",
+        14
+      ],
+      [
+        "TCGA-CDR redacted",
+        5
+      ],
+      [
+        "missing or zero OS time",
+        14
+      ]
+    ],
+    "analysed": 1064,
+    "analysed_events": 150,
+    "evaluable": 1064,
+    "evaluable_events": 150,
+    "evaluable_excluded": 0
+  },
+  "GSE96058": {
+    "source": "GEO samples\nn = 3,409",
+    "excluded": [
+      [
+        "technical replicates",
+        136
+      ],
+      [
+        "missing OS",
+        0
+      ]
+    ],
+    "analysed": 3273,
+    "analysed_events": 336,
+    "evaluable": 3273,
+    "evaluable_events": 336,
+    "evaluable_excluded": 0
+  },
+  "METABRIC": {
+    "source": "cBioPortal clinical records\nn = 2,509",
+    "excluded": [
+      [
+        "no expression profile",
+        529
+      ]
+    ],
+    "analysed": 1980,
+    "analysed_events": 1143,
+    "evaluable": 1979,
+    "evaluable_events": 1143,
+    "evaluable_excluded": 1
+  },
+  "GSE20685": {
+    "source": "GEO samples\nn = 327",
+    "excluded": [
+      [
+        "none",
+        0
+      ]
+    ],
+    "analysed": 327,
+    "analysed_events": 83,
+    "evaluable": 327,
+    "evaluable_events": 83,
+    "evaluable_excluded": 0
+  }
+}

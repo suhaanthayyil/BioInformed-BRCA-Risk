@@ -5,12 +5,12 @@ PAM50-ROR is a risk-of-recurrence tool, while the primary analysis benchmarks
 discrimination on overall survival (OS) because OS is the endpoint available
 across all four public cohorts. METABRIC is the one cohort that carries a
 disease-free-survival (DFS / recurrence) endpoint for the same samples that
-have pathway features and an official PAM50-ROR score (n = 1,980).
+have pathway features and a genefu PAM50 ROR-S score (n = 1,980).
 
-This script re-runs the locked Gradient-Boosted-Survival model versus official
+This script re-runs the headline model versus genefu
 PAM50-ROR on METABRIC using the DFS endpoint (and OS on the same samples, for a
 like-for-like contrast), overall and in the TNBC subgroup. It is an exploratory,
-secondary sensitivity analysis — not the pre-registered primary endpoint.
+secondary sensitivity analysis — not the registered primary endpoint.
 
 Output: results/Table_S16_metabric_recurrence_sensitivity.csv
 
@@ -32,9 +32,8 @@ sys.path.insert(0, str(REPO_ROOT))
 from scripts.external_validation import (  # noqa: E402
     PAM50_COMPARATOR,
     load_frame,
-    load_pickle,
-    predict_artifact,
 )
+from src.ml import registry  # noqa: E402
 from src.survival import (  # noqa: E402
     bootstrap_c_index_ci,
     harrell_c_index,
@@ -46,7 +45,7 @@ MODELS = REPO_ROOT / "models"
 PROCESSED = REPO_ROOT / "data" / "processed"
 SEED = 42
 BOOTSTRAP_ITER = 1000
-HEADLINE = "Gradient_Boosted_Survival"
+HEADLINE = registry.headline_name()
 COHORT = "METABRIC"
 ENDPOINTS = [("OS", "os_days", "os_event"), ("DFS", "dfs_days", "dfs_event")]
 
@@ -73,13 +72,7 @@ def main() -> None:
     if mb.empty:
         raise SystemExit("No METABRIC samples in the harmonized frame.")
 
-    import json
-
-    meta = json.loads((PROCESSED / "ml_model_zoo.metadata.json").read_text())
-    features = meta["features"]
-
-    artifact = load_pickle(MODELS / "gradient_boosted_survival.pkl")
-    mb[HEADLINE] = predict_artifact(HEADLINE, artifact, mb[features])
+    mb[HEADLINE] = registry.predict(registry.load_artifact(HEADLINE), mb)
 
     pam = pd.read_parquet(PROCESSED / "baselines_pam50.parquet")
     pam = (
@@ -113,9 +106,9 @@ def main() -> None:
                     "subgroup": subgroup,
                     "n": gb["n"],
                     "events": gb["events"],
-                    "gbsa_harrell_c": gb["c"],
-                    "gbsa_ci_low": gb["ci_low"],
-                    "gbsa_ci_high": gb["ci_high"],
+                    "model_harrell_c": gb["c"],
+                    "model_ci_low": gb["ci_low"],
+                    "model_ci_high": gb["ci_high"],
                     "pam50_ror_harrell_c": pm["c"],
                     "pam50_ror_ci_low": pm["ci_low"],
                     "pam50_ror_ci_high": pm["ci_high"],

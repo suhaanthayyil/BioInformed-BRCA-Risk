@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Phase 6 external validation and pre-registered TNBC primary endpoint."""
+"""Phase 6 external validation and registered TNBC primary endpoint."""
 
 from __future__ import annotations
 
 import json
-import pickle
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -18,9 +17,9 @@ from lifelines import CoxPHFitter
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.train_ml_zoo import stage_to_ordinal  # noqa: E402
+from src.clinical import stage_to_ordinal  # noqa: E402
 from src.meta import random_effects_from_ci  # noqa: E402
-from src.ml.deepsurv import CoxMLP  # noqa: E402
+from src.ml import registry  # noqa: E402
 from src.ml.wrappers import (  # noqa: E402,F401  (imported so pickled artifacts resolve)
     LifelinesCoxWrapper,
     SkSurvAdapter,
@@ -44,7 +43,7 @@ MODELS = REPO_ROOT / "models"
 LOGS = REPO_ROOT / "logs"
 SEED = 42
 BOOTSTRAP_ITER = 1000
-PAM50_COMPARATOR = "PAM50_ROR_official"
+PAM50_COMPARATOR = "PAM50_RORS_genefu"
 
 
 def timestamp() -> str:
@@ -71,51 +70,17 @@ def load_frame() -> pd.DataFrame:
     return frame
 
 
-def load_pickle(path: Path):
-    with path.open("rb") as fh:
-        return pickle.load(fh)
-
-
 def load_model_artifacts() -> dict[str, dict]:
-    artifacts = {}
-    for name, filename in {
-        "Cox_PH": "cox_ph.pkl",
-        "Elastic_Net_Cox": "elastic_net_cox.pkl",
-        "Random_Survival_Forest": "random_survival_forest.pkl",
-        "Gradient_Boosted_Survival": "gradient_boosted_survival.pkl",
-    }.items():
-        artifacts[name] = load_pickle(MODELS / filename)
-    payload = torch.load(MODELS / "deepsurv.pt", map_location="cpu", weights_only=False)
-    config = payload["config"]
-    model = CoxMLP(payload["input_dim"], tuple(config["hidden_dims"]), config["dropout"])
-    model.load_state_dict(payload["state_dict"])
-    model.eval()
-    artifacts["DeepSurv"] = {
-        "model_name": "DeepSurv",
-        "config": config,
-        "preprocessor": payload["preprocessor"],
-        "model": model,
-        "features": payload["features"],
-    }
-    artifacts["Stacked_Ensemble"] = load_pickle(MODELS / "stacked_ensemble.pkl")
-    return artifacts
+    return {name: registry.load_artifact(name) for name in registry.FILES}
 
 
 def predict_artifact(name: str, artifact: dict, x: pd.DataFrame, base_predictions: dict[str, np.ndarray] | None = None) -> np.ndarray:
     if name == "Stacked_Ensemble":
-        top = artifact["top_models"]
         if base_predictions is None:
             raise ValueError("Stacked ensemble requires base predictions")
-        meta_x = pd.DataFrame({model: base_predictions[model] for model in top})
+        meta_x = pd.DataFrame({model: base_predictions[model] for model in artifact["top_models"]})
         return artifact["meta_model"].predict_partial_hazard(meta_x).to_numpy(float)
-
-    pre = artifact["preprocessor"]
-    x_scaled = pre.transform(x[artifact["features"]])
-    if name == "DeepSurv":
-        with torch.no_grad():
-            risk = artifact["model"](torch.tensor(x_scaled, dtype=torch.float32)).detach().numpy()
-        return risk.astype(float)
-    return np.asarray(artifact["model"].predict(x_scaled), dtype=float)
+    return registry.predict(artifact, x)
 
 
 def metric_row(cohort: str, model: str, subgroup: str, sub: pd.DataFrame, risk_col: str) -> dict:
@@ -161,6 +126,18 @@ def metric_row(cohort: str, model: str, subgroup: str, sub: pd.DataFrame, risk_c
         **cox_hr_high_low(sub["os_days"], sub["os_event"], sub[risk_col]),
         "status": "ok",
     }
+
+
+def use_oof_for_training_cohort(predictions: pd.DataFrame) -> pd.DataFrame:
+    oof = pd.read_csv(RESULTS / "05_ml_oof_predictions.csv")
+    models = [c for c in oof.columns if c not in {"sample_id", "time", "event"}]
+    tcga = predictions["cohort"].eq("TCGA-BRCA")
+    lookup = oof.set_index("sample_id")
+    for model in models:
+        if model in predictions:
+            predictions.loc[tcga, model] = predictions.loc[tcga, "sample_id"].map(lookup[model]).to_numpy()
+    predictions["prediction_type"] = np.where(tcga, "out_of_fold_cv", "external_fixed_model")
+    return predictions
 
 
 def add_combined_model(predictions: pd.DataFrame, headline: str) -> pd.DataFrame:
@@ -219,6 +196,7 @@ def main() -> None:
         rows.append(cohort_pred)
 
     predictions = pd.concat(rows, ignore_index=True)
+    predictions = use_oof_for_training_cohort(predictions)
     pam50_all = pd.read_parquet(PROCESSED / "baselines_pam50.parquet")
     pam50 = (
         pam50_all[pam50_all["baseline"].eq(PAM50_COMPARATOR) & pam50_all["status"].eq("ok")][["sample_id", "score"]]
@@ -269,6 +247,7 @@ def main() -> None:
                 if comparator not in sub or headline not in sub:
                     continue
                 valid = sub[[headline, comparator, "os_days", "os_event"]].dropna()
+                valid = valid[valid["os_days"] > 0]
                 result = paired_bootstrap_delta_c_index(
                     valid["os_days"],
                     valid["os_event"],

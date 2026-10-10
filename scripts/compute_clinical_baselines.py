@@ -26,7 +26,6 @@ from src.baselines import (  # noqa: E402
     oncotype_dx_surrogate,
     pam50_ror_surrogate,
     percentile_0_100,
-    samples_by_gene_from_tcga,
 )
 from src.survival import (  # noqa: E402
     brier_score_at,
@@ -105,11 +104,8 @@ def load_pam50_map() -> pd.DataFrame:
 def load_baseline_expression(cohort: str, sample_ids: list[str]) -> pd.DataFrame:
     genes = needed_genes()
     if cohort == "TCGA-BRCA":
-        return samples_by_gene_from_tcga(
-            str(DATA / "01_tcga_expression_normalized.csv"),
-            str(PROCESSED / "02_tcga_feature_matrix.csv"),
-            keep_genes=genes,
-        ).reindex(sample_ids)
+        expr = pd.read_parquet(PROCESSED / "01_tcga_expression.parquet")
+        return expression_wide_to_samples_by_gene(expr, sample_ids=sample_ids, keep_genes=genes)
     if cohort == "GSE96058":
         expr = pd.read_parquet(PROCESSED / "02_gse96058_expression.parquet")
         return expression_wide_to_samples_by_gene(expr, sample_ids=sample_ids, keep_genes=genes)
@@ -124,7 +120,7 @@ def load_baseline_expression(cohort: str, sample_ids: list[str]) -> pd.DataFrame
 
 def tumor_size_series(cohort: str, sample_ids: list[str]) -> pd.Series | None:
     if cohort == "GSE96058":
-        clinical = pd.read_csv(DATA / "clinical" / "01_gse96058_clinical.csv")
+        clinical = pd.read_csv(DATA / "clinical" / "gse96058_clinical.csv")
         return clinical.set_index("sample_id").reindex(sample_ids)["tumor_size"]
     if cohort == "METABRIC":
         clinical = pd.read_parquet(PROCESSED / "03_metabric_clinical.parquet")
@@ -132,12 +128,12 @@ def tumor_size_series(cohort: str, sample_ids: list[str]) -> pd.Series | None:
     return None
 
 
-def official_pam50_score(
+def genefu_pam50_score(
     cohort: str,
     samples_by_gene: pd.DataFrame,
     pam50_map: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Run official genefu PAM50 subtype and rorS scoring for one cohort."""
+    """Run genefu PAM50 subtype and rorS scoring for one cohort."""
 
     available = [g for g in pam50_map["probe"].tolist() if g in samples_by_gene.columns]
     if len(available) < 40:
@@ -146,12 +142,12 @@ def official_pam50_score(
                 {
                     "cohort": cohort,
                     "sample_id": pd.NA,
-                    "baseline": "PAM50_ROR_official",
+                    "baseline": "PAM50_RORS_genefu",
                     "score": np.nan,
                     "score_0_100": np.nan,
                     "method_label": "genefu_rorS",
                     "status": "unavailable_low_gene_coverage",
-                    "note": f"Only {len(available)} PAM50 genes available; genefu official scoring not attempted.",
+                    "note": f"Only {len(available)} PAM50 genes available; genefu scoring not attempted.",
                 }
             ]
         )
@@ -171,13 +167,13 @@ def official_pam50_score(
         completed = subprocess.run(cmd, cwd=REPO_ROOT, text=True, capture_output=True, check=False)
         if completed.returncode != 0:
             note = completed.stderr.strip().splitlines()[-1] if completed.stderr.strip() else "unknown genefu error"
-            log(f"Official PAM50 failed for {cohort}: {note}")
+            log(f"genefu PAM50 failed for {cohort}: {note}")
             return pd.DataFrame(
                 [
                     {
                         "cohort": cohort,
                         "sample_id": pd.NA,
-                        "baseline": "PAM50_ROR_official",
+                        "baseline": "PAM50_RORS_genefu",
                         "score": np.nan,
                         "score_0_100": np.nan,
                         "method_label": "genefu_rorS",
@@ -190,12 +186,12 @@ def official_pam50_score(
 
     out["sample_id"] = out["sample_id"].astype(str)
     out["cohort"] = cohort
-    out["baseline"] = "PAM50_ROR_official"
+    out["baseline"] = "PAM50_RORS_genefu"
     out["score"] = pd.to_numeric(out["rorS_score"], errors="coerce")
     out["score_0_100"] = out["score"].clip(0, 100)
     out["method_label"] = "genefu_rorS"
     out["status"] = "ok"
-    out["note"] = f"Official genefu::rorS and molecular.subtyping(pam50); {len(available)} PAM50 genes supplied."
+    out["note"] = f"genefu::rorS (research implementation of PAM50 ROR-S) and molecular.subtyping(pam50); {len(available)} PAM50 genes supplied."
     return out[
         [
             "cohort",
@@ -251,16 +247,17 @@ def compute_scores(samples: pd.DataFrame) -> pd.DataFrame:
         sample_ids = cohort_samples["sample_id"].astype(str).tolist()
         expr = load_baseline_expression(cohort, sample_ids)
         if not expr.empty:
-            expr = expr.reindex(sample_ids)
+            expr = expr.reindex(sample_ids).dropna(how="all")
+            sample_ids = expr.index.tolist()
 
         if not expr.empty:
-            official = official_pam50_score(cohort, expr, pam50_map)
-            official = official.merge(
+            genefu_scores = genefu_pam50_score(cohort, expr, pam50_map)
+            genefu_scores = genefu_scores.merge(
                 cohort_samples[["sample_id", "er_status", "tnbc_flag", "intrinsic_subtype_pam50_published"]],
                 on="sample_id",
                 how="left",
             )
-            all_scores.append(official)
+            all_scores.append(genefu_scores)
 
         subtype = cohort_samples.set_index("sample_id")["intrinsic_subtype_pam50_published"].reindex(sample_ids)
         pam50 = pam50_ror_surrogate(subtype, expr, tumor_size_series(cohort, sample_ids))
@@ -399,7 +396,7 @@ def write_report(scores: pd.DataFrame, metrics: pd.DataFrame) -> None:
             ["cohort", "baseline", "n", "events", "harrell_c", "harrell_c_ci_low", "harrell_c_ci_high", "status"]
         ].to_markdown(index=False, floatfmt=".3f"),
         "",
-        "PAM50 values are marked as `PAM50_ROR_surrogate` unless official genefu scoring is available. "
+        "PAM50 values are marked as `PAM50_ROR_surrogate` unless genefu scoring is available. "
         "MammaPrint, EndoPredict, and BCI are not fabricated when exact public formulae are absent.",
         "",
     ]
@@ -439,7 +436,7 @@ def main() -> None:
         },
         "metric_file": "results/Table_S1_clinical_baselines.csv",
         "surrogate_policy": "No proprietary assay score was fabricated; unavailable exact formulas are labeled unavailable.",
-        "pam50_policy": "Official genefu::rorS is preferred; subtype-risk surrogate retained only as fallback/comparison.",
+        "pam50_policy": "genefu::rorS (research implementation of PAM50 ROR-S) is preferred; subtype-risk surrogate retained only as fallback/comparison.",
     }
     (PROCESSED / "clinical_baselines.metadata.json").write_text(json.dumps(metadata, indent=2))
     write_report(scores, metrics)

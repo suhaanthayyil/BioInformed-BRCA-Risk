@@ -1,6 +1,6 @@
 # Phase 4 Pathway Scoring QC
 
-Generated: 2026-05-16T12:31:52-04:00
+Generated: 2026-10-01T20:57:30-04:00
 MSigDB version: v2024.1.Hs
 
 ## Gene Set Inventory
@@ -13,8 +13,8 @@ MSigDB version: v2024.1.Hs
 
 | cohort    |   n_samples_pathway_scores |   n_pathway_sets |   n_samples_features |   n_features |
 |:----------|---------------------------:|-----------------:|---------------------:|-------------:|
-| TCGA-BRCA |                        213 |              345 |                  213 |            7 |
-| GSE96058  |                       3409 |              347 |                 3409 |            7 |
+| TCGA-BRCA |                       1064 |              345 |                 1064 |            7 |
+| GSE96058  |                       3273 |              347 |                 3273 |            7 |
 | METABRIC  |                       1980 |              347 |                 1980 |            7 |
 | GSE20685  |                        327 |              344 |                  327 |            7 |
 

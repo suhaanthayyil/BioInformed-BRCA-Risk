@@ -1,14 +1,8 @@
 #!/usr/bin/env python3
-"""Task 2: Feature-ablation and incremental-value analysis (Tables 6, S5).
-
-Eight feature set combinations trained on TCGA with locked GBSA architecture,
-applied to three external cohorts. Reports Harrell C, Uno C, 5-year Brier,
-ICI, and paired delta C vs PAM50-ROR-only.
-"""
+"""Feature-ablation and covariate sensitivity (Tables 6, S5)."""
 
 from __future__ import annotations
 
-import json
 import sys
 from pathlib import Path
 
@@ -18,12 +12,12 @@ import pandas as pd
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-from sksurv.ensemble import GradientBoostingSurvivalAnalysis
-from sksurv.util import Surv
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
+from src.clinical import PATHWAY_FEATURES, PRIMARY_FEATURES, stage_to_ordinal  # noqa: E402
+from src.ml import registry  # noqa: E402
 from src.survival import (  # noqa: E402
     brier_score_at,
     bootstrap_c_index_ci,
@@ -38,44 +32,21 @@ RESULTS = REPO_ROOT / "results"
 SEED = 42
 BOOTSTRAP_ITER = 1000
 N_SPLITS = 5
-PAM50 = "PAM50_ROR_official"
+PAM50 = "PAM50_RORS_genefu"
 EXTERNAL_COHORTS = ["GSE96058", "METABRIC", "GSE20685"]
+HEADLINE = registry.headline_name()
 
-PATHWAY_FEATURES = [
-    "Pathway_Immune",
-    "Pathway_Proliferation",
-    "Pathway_DNA_Repair",
-    "Pathway_Metabolism",
-    "Pathway_Stromal_EMT",
-    "Pathway_Apoptosis_Stress",
-    "Pathway_Hormone",
-]
-
-
-def stage_to_ordinal(value) -> float:
-    text = "" if pd.isna(value) else str(value).upper()
-    if "IV" in text:
-        return 4.0
-    if "III" in text:
-        return 3.0
-    if "II" in text:
-        return 2.0
-    if "I" in text:
-        return 1.0
-    return np.nan
-
-
-# Eight feature-set combinations
 FEATURE_SETS = {
-    "Pathways_only": PATHWAY_FEATURES,
-    "Clinical_only": ["age_at_dx", "stage_ordinal"],
-    "Pathways+Clinical": PATHWAY_FEATURES + ["age_at_dx", "stage_ordinal"],
+    "Pathways_only": PRIMARY_FEATURES,
+    "Pathways+Age": [*PATHWAY_FEATURES, "age_at_dx"],
+    "Pathways+Age+Stage": [*PATHWAY_FEATURES, "age_at_dx", "stage_ordinal"],
+    "Age_only": ["age_at_dx"],
+    "Age+Stage": ["age_at_dx", "stage_ordinal"],
     "Proliferation_only": ["Pathway_Proliferation"],
     "Hormone_only": ["Pathway_Hormone"],
     "Immune_only": ["Pathway_Immune"],
     "Top3_pathways": ["Pathway_Hormone", "Pathway_Proliferation", "Pathway_Immune"],
-    "Leave_one_out_Hormone": [p for p in PATHWAY_FEATURES if p != "Pathway_Hormone"]
-        + ["age_at_dx", "stage_ordinal"],
+    "Leave_one_out_Hormone": [p for p in PATHWAY_FEATURES if p != "Pathway_Hormone"],
 }
 
 
@@ -101,16 +72,12 @@ def make_preprocessor() -> Pipeline:
     return Pipeline([("imputer", SimpleImputer(strategy="median")), ("scaler", StandardScaler())])
 
 
-def get_locked_gbsa_config() -> dict:
-    # Load the best config from the internal CV table
-    cv_table = pd.read_csv(RESULTS / "Table_S2_ml_internal_cv.csv")
-    gbsa_row = cv_table[cv_table["model"] == "Gradient_Boosted_Survival"].iloc[0]
-    return json.loads(gbsa_row["config"])
+def headline_config() -> dict:
+    return registry.selected_config(HEADLINE)
 
 
 def train_and_predict(feature_names: list[str], train_df: pd.DataFrame,
                       test_dfs: dict[str, pd.DataFrame], config: dict) -> dict[str, np.ndarray]:
-    """Train GBSA on TCGA with given features, predict on external cohorts."""
     available = [f for f in feature_names if f in train_df.columns]
     if not available:
         return {c: np.full(len(df), np.nan) for c, df in test_dfs.items()}
@@ -120,14 +87,13 @@ def train_and_predict(feature_names: list[str], train_df: pd.DataFrame,
     t_train = train_df["os_days"].to_numpy(float)
     e_train = train_df["os_event"].to_numpy(bool)
 
-    y_train = Surv.from_arrays(e_train, t_train)
-    gbsa = GradientBoostingSurvivalAnalysis(random_state=SEED, **config)
-    gbsa.fit(x_train, y_train)
+    model = registry.make_estimator(HEADLINE, config)
+    model.fit(x_train, t_train, e_train)
 
     predictions = {}
     for cohort, cdf in test_dfs.items():
         x_test = pre.transform(cdf[available])
-        predictions[cohort] = np.asarray(gbsa.predict(x_test), dtype=float)
+        predictions[cohort] = np.asarray(model.predict(x_test), dtype=float).ravel()
     return predictions
 
 
@@ -168,8 +134,8 @@ def compute_ici(time, event, risk) -> float:
 def main() -> None:
     np.random.seed(SEED)
     frame = load_frame()
-    config = get_locked_gbsa_config()
-    print(f"Locked GBSA config: {config}")
+    config = headline_config()
+    print(f"{HEADLINE} config: {config}")
 
     # Training set
     train = frame[
@@ -178,6 +144,7 @@ def main() -> None:
         & (frame["os_days"] > 0)
         & frame["os_event"].notna()
     ].copy()
+    stage_train = train[train["stage_ordinal"].notna()]
 
     # External cohorts
     ext_dfs = {}
@@ -193,12 +160,15 @@ def main() -> None:
     rows = []
     for set_name, feature_list in FEATURE_SETS.items():
         print(f"  Training feature set: {set_name} ({len(feature_list)} features)")
-        predictions = train_and_predict(feature_list, train, ext_dfs, config)
+        fit_on = stage_train if "stage_ordinal" in feature_list else train
+        predictions = train_and_predict(feature_list, fit_on, ext_dfs, config)
 
         for cohort in EXTERNAL_COHORTS:
             cdf = ext_dfs[cohort].copy()
             cdf["ablation_risk"] = predictions[cohort]
             cdf = cdf.merge(pam50_scores, on="sample_id", how="left")
+            if "stage_ordinal" in feature_list:
+                cdf = cdf[cdf["stage_ordinal"].notna()]
             valid = cdf[
                 cdf["ablation_risk"].notna()
                 & cdf[PAM50].notna()
@@ -276,7 +246,7 @@ def main() -> None:
             "mean_brier_5y": grp["brier_5y"].mean(),
             "mean_ici": grp["ici"].mean(),
             "mean_delta_vs_pam50": grp["delta_vs_pam50"].mean(),
-            "n_cohorts": len(grp),
+            "n_cohorts": int(grp["harrell_c"].notna().sum()),
         })
     summary = pd.DataFrame(summary_rows)
     summary.to_csv(RESULTS / "Table_6_feature_ablation_summary.csv", index=False)

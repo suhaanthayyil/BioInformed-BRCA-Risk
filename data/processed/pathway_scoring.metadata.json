@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-16T12:31:52-04:00",
+  "generated_at": "2026-10-01T20:57:30-04:00",
   "seed": 42,
   "msigdb_version": "v2024.1.Hs",
   "gene_set_counts": {
@@ -12,16 +12,16 @@
   "cohort_shapes": [
     {
       "cohort": "TCGA-BRCA",
-      "n_samples_pathway_scores": 213,
+      "n_samples_pathway_scores": 1064,
       "n_pathway_sets": 345,
-      "n_samples_features": 213,
+      "n_samples_features": 1064,
       "n_features": 7
     },
     {
       "cohort": "GSE96058",
-      "n_samples_pathway_scores": 3409,
+      "n_samples_pathway_scores": 3273,
       "n_pathway_sets": 347,
-      "n_samples_features": 3409,
+      "n_samples_features": 3273,
       "n_features": 7
     },
     {

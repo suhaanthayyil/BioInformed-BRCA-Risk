@@ -22,17 +22,32 @@
 
 ## Locked-artifact manifest
 
-The trained weights that produced the locked external-validation results are
-committed under `models/` and fingerprinted in `docs/MODEL_SHA256.txt`
-(`shasum -a 256 -c docs/MODEL_SHA256.txt`). The headline model is
-`gradient_boosted_survival.pkl`; its features, training cohort (TCGA-BRCA,
-n = 213), seed (42), and selected configuration are recorded in
-`models/README.md` and `data/processed/ml_model_zoo.metadata.json`. This lets a
-reviewer confirm the scored weights were not altered after the endpoint lock.
+The weights trained and locked on 2026-05-16 (TCGA-BRCA n = 213, nine features
+including a stage covariate that was missing for every external patient) are
+kept unchanged in `models/locked_v1/` and fingerprinted in
+`docs/MODEL_SHA256.txt`. `scripts/locked_model_sensitivity.py` scores them on
+every eligible external patient (Table S19).
 
-**Timeline note.** This pre-registration text was committed at
-`7783f4f0bfaaa6bdc611c78d33ccda621c6b243d`, before any results commits. The
-internal pre-registration timestamp above (2026-05-16) precedes the first
-public Git commit date (2026-05-17) because the endpoint was fixed locally
-before the repository history was published; the ordering of the lock relative
-to results is preserved in the Git history.
+The current weights in `models/` come from the revised analysis (all eligible
+TCGA-BRCA primary tumours, the seven registered pathway scores only); see `models/README.md` and
+`data/processed/ml_model_zoo.metadata.json`.
+
+**Timeline (corrected 2026-10-01).** The registration text above was committed
+at `7783f4f` on 2026-05-16 11:11 (-04:00). It was not the first analysis in
+this repository. The first commit (`9bef60a`, 2026-04-01) already contained the
+earlier two-cohort study that was posted as the April 2026 preprint: TCGA-BRCA
+models with a different seven-pathway definition and binary 5-year outcome,
+applied to GSE96058/SCAN-B (`results/legacy_v1_preprint/transfer_results.csv`, notebooks 03-14).
+`7783f4f` itself added `paper/main.tex`, which reported those GSE96058 results.
+
+What was new after the lock (all on or after 2026-05-16 11:17): METABRIC and
+GSE20685 acquisition, cohort harmonization, the MSigDB pathway definitions,
+the survival model zoo, genefu PAM50 ROR-S scoring, the TNBC primary endpoint
+and every survival result reported in the BMC submission. GSE96058 and TCGA
+had been analysed before the lock under the earlier design.
+
+The sentence "Modifications after analysis begins: NOT PERMITTED" was not
+followed: this file was edited on 2026-05-24 (venue) and 2026-06-22 (manifest
+and timeline note), and the analysis was revised in October 2026 after the
+journal's pre-publication checks. Every deviation from the registered plan,
+with its reason, is listed in `docs/REGISTRATION_DEVIATIONS.md`.

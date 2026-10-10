@@ -1,0 +1,9 @@
+endpoint,registered_criterion,estimate,ci_low,ci_high,p,met,cohorts
+Primary: TNBC delta C vs PAM50 ROR-S (all cohorts with TNBC; TCGA out-of-fold),random-effects delta >= +0.03 and p < 0.05,0.02042608428104462,-0.040280068415701586,0.08113223697779083,0.5095809059013501,False,"GSE96058, METABRIC, TCGA-BRCA"
+Primary sensitivity: TNBC delta C vs PAM50 ROR-S (external cohorts only),random-effects delta >= +0.03 and p < 0.05,0.01332238909419317,-0.05098679791010395,0.07763157609849029,0.6847157199440492,False,"GSE96058, METABRIC"
+Primary claim: TNBC superiority to Oncotype DX surrogate,superior in TNBC,,,,,,not evaluable: the 21-gene surrogate is defined for ER-positive disease only
+Primary claim: overall non-inferiority to Oncotype DX surrogate (ER-positive),one-sided 95% lower bound of delta > -0.02,-0.029039899939506307,-0.05933262309475244,,0.11483532987936376,False,"GSE96058, METABRIC"
+Secondary (a): ML minus Cox >= +0.02 in at least one cohort,delta >= 0.02 in >= 1 cohort,0.03423910466163993,,,,True,external: GSE96058 -0.041; METABRIC -0.012; GSE20685 +0.034; internal CV -0.021
+Secondary (b): immune pathway dominant attribution in TNBC and HER2-positive,Pathway_Immune ranked first in both subgroups,,,,,False,her2_positive: top=Pathway_Hormone; tnbc: top=Pathway_Immune
+Secondary (c): combined ML + PAM50 ROR-S + age IDI over PAM50 ROR-S alone (5-year),IDI > 0.05,0.04221188356346788,,,,False,"GSE96058 +0.087 [+0.073, +0.100]; METABRIC +0.024 [+0.012, +0.034]; GSE20685 +0.016 [-0.006, +0.042]"
+Secondary (d): overall non-inferiority to PAM50 ROR-S (external cohorts),one-sided 95% lower bound of delta > -0.02,-0.03945861234758306,-0.07672036745786469,,0.08153820153342466,False,"GSE96058, METABRIC, GSE20685"

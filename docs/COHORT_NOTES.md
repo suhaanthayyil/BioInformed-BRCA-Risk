@@ -1,22 +1,29 @@
 # Cohort Notes
 
-Last updated: 2026-05-16T11:16:00-04:00
+Last updated: 2026-10-03 (cohort rebuild); original notes 2026-05-16.
+
+## Inclusion criteria (revised 2026-10-01)
+
+Every cohort keeps every eligible patient regardless of follow-up length;
+censored patients enter the survival analysis at their last follow-up. Counts
+per step are written by `scripts/ingest_raw.py` to
+`data/processed/ingest_flow.json` and drawn in Figure 1
+(`scripts/build_figure1_consort.py`).
 
 ## TCGA-BRCA
 
-- Existing repository files: `data/01_tcga_expression_normalized.csv`, `data/clinical/01_tcga_clinical.csv`, and `data/processed/02_tcga_feature_matrix.csv`.
-- `02_tcga_feature_matrix.csv` provides the canonical TCGA sample-ID ordering used to align the header-less normalized expression file; its pathway columns now mirror the seven authoritative features. The **authoritative model input is `data/processed/04_pathway_features.parquet`** (all four cohorts, the seven harmonized pathways). Earlier revisions of this CSV carried a now-removed gene-level pathway schema.
-- Current usable clinical rows: 213 patients with `time_to_event`, `event_status`, `high_risk`, and published `pam50_subtype` fields.
-- Expression normalization in the v1 repo is already preprocessed/log-normalized; v2 harmonization must not assume that TCGA centering/scaling transfers to external cohorts.
+- Source: UCSC Xena `TCGA.BRCA.sampleMap/HiSeqV2` (log2(RSEM normalized count + 1)), `BRCA_clinicalMatrix`, and TCGA-CDR survival (`survival/BRCA_survival.txt`).
+- Inclusion: primary tumour samples (barcode type 01), one per patient, female, not redacted in TCGA-CDR, OS status and OS time > 0 available. 1,097 primary-tumour patients; 14 male or sex missing, 5 redacted and 14 without usable OS excluded; 1,064 analysed, 150 deaths.
+- Stage: `pathologic_stage` (AJCC), mapped to I-IV; "Stage X" and discrepant entries treated as missing.
+- Receptor status: ER and PR from IHC fields; HER2 positive if IHC or ISH positive, negative if ISH negative or IHC negative.
+- Legacy note: the submitted analysis used a 213-sample set inherited from the v1 binary-outcome study (`data/legacy_v1_preprint/01_tcga_clinical.csv`). It kept only patients who died or had at least 5 years of follow-up, and included 37 solid-tissue-normal (-11) and 3 metastatic (-06) samples alongside the primary tumours of the same patients. Its sample IDs are listed in `data/clinical/legacy_v1_cohort_ids.csv`.
 
 ## SCAN-B / GSE96058
 
-- Source: NCBI GEO supplemental file `GSE96058_gene_expression_3273_samples_and_136_replicates_transformed.csv.gz`.
-- Download SHA256: `3c717baf7960e1f1477a72744a399a42fabba113c9e7ecb3d55997574d7e9732`.
-- Parsed output: `data/processed/02_gse96058_expression.parquet`.
-- Parsed shape: 30,865 gene rows by 3,409 sample columns, with expression in gene-row/sample-column orientation.
-- Clinical rows currently available in-repo: 1,483 rows in `data/clinical/01_gse96058_clinical.csv`.
-- Normalization note: the downloaded expression file is already transformed by the SCAN-B/GEO release. Cross-cohort analyses should compute pathway scores within cohort or use rank/standardization procedures that do not leak training cohort scaling into validation cohorts.
+- Source: GEO supplementary expression file (3,273 patients + 136 technical replicates) and the two series matrices (GPL11154, GPL18573) for clinical data.
+- Inclusion: all non-replicate samples with OS; 3,273 analysed, 336 deaths.
+- Stage is not released in GEO; tumour size and nodal group are, but no M category, so stage is treated as unavailable.
+- Legacy note: the submitted analysis used 1,483 samples from the v1 study (`data/legacy_v1_preprint/01_gse96058_clinical.csv`). That set excluded patients censored before 5 years and contained 60 technical replicates.
 
 ## METABRIC
 
@@ -29,6 +36,8 @@ Last updated: 2026-05-16T11:16:00-04:00
 - Parsed expression shape: 20,603 gene rows by 1,980 sample columns, cBioPortal z-scores relative to diploid samples.
 - Parsed clinical shape: 2,509 sample rows, with a first-pass TNBC flag count of 320.
 - Normalization note: METABRIC expression z-scores are not directly comparable to RNA-seq transformed expression values. V2 models must treat METABRIC as an external validation cohort and avoid training-time normalization leakage.
+
+- Stage: `TUMOR_STAGE` (1-4) used directly; stage 0 (in situ) and missing values treated as missing. 2,509 clinical records, 1,980 with expression; the 529 without an expression profile cannot be scored.
 
 ## Pending Data
 
@@ -44,3 +53,4 @@ Last updated: 2026-05-16T11:16:00-04:00
 - Parsed expression shape: 22,189 gene-symbol rows by 327 sample columns after GPL570 probe-to-symbol mapping and duplicate-symbol averaging.
 - Parsed clinical shape: 327 rows with OS event and follow-up duration from GEO sample characteristics.
 - Limitation: ER/PR/HER2 receptor status was not available in the parsed series metadata, so GSE20685 can support overall survival validation but cannot contribute to the TNBC primary endpoint unless additional metadata is found.
+- Stage: AJCC anatomic stage I-IV derived from the GEO T, N and M fields (`src/clinical.py::tnm_to_stage`).

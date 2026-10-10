@@ -8,7 +8,7 @@ This file does two things:
    collection itself robust).
 
 2. Detect whether an R installation with the ``genefu`` Bioconductor package is
-   available. The official PAM50-ROR test (``tests/test_pam50_official.py``)
+   available. The genefu PAM50 ROR-S test (``tests/test_pam50_genefu.py``)
    shells out to ``Rscript`` via ``scripts.compute_clinical_baselines``; when R
    or genefu is missing it is skipped cleanly instead of erroring at import.
 """
@@ -28,7 +28,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 # Tests that require R/genefu, identified by module filename.
-_R_DEPENDENT_MODULES = {"test_pam50_official.py"}
+_R_DEPENDENT_MODULES = {"test_pam50_genefu.py"}
 
 
 @functools.lru_cache(maxsize=1)

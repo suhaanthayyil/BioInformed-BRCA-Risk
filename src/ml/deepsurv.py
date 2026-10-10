@@ -10,6 +10,7 @@ from torch import nn
 
 
 RANDOM_SEED = 42
+torch.set_num_threads(1)
 
 
 class CoxMLP(nn.Module):
@@ -57,13 +58,23 @@ class DeepSurvEstimator:
 
     def __init__(self, config: DeepSurvConfig | None = None, device: str | None = None):
         self.config = config or DeepSurvConfig()
-        self.device = device or ("mps" if torch.backends.mps.is_available() else "cpu")
+        self.device = device or "cpu"
         self.model_: CoxMLP | None = None
 
     def fit(self, x, time, event, x_val=None, time_val=None, event_val=None):
         torch.manual_seed(RANDOM_SEED)
         np.random.seed(RANDOM_SEED)
         x_arr = np.asarray(x, dtype=np.float32)
+        time = np.asarray(time, dtype=np.float32)
+        event = np.asarray(event, dtype=np.float32)
+        if x_val is None and len(x_arr) >= 50:
+            rng = np.random.default_rng(RANDOM_SEED)
+            val = np.zeros(len(x_arr), dtype=bool)
+            for label in (0.0, 1.0):
+                idx = np.flatnonzero(event == label)
+                val[rng.choice(idx, size=int(round(0.2 * len(idx))), replace=False)] = True
+            x_val, time_val, event_val = x_arr[val], time[val], event[val]
+            x_arr, time, event = x_arr[~val], time[~val], event[~val]
         self.model_ = CoxMLP(x_arr.shape[1], self.config.hidden_dims, self.config.dropout).to(self.device)
         optimizer = torch.optim.AdamW(
             self.model_.parameters(),

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Task 1: External-only TNBC sensitivity analysis (Table S15).
 
-Meta-analyzed delta C-index of locked GBSA vs PAM50-ROR in TNBC,
-restricted to external cohorts GSE96058 (n~55) and METABRIC (n~320).
+Meta-analyzed delta C-index of the headline model vs PAM50 ROR-S in TNBC,
+restricted to the external cohorts GSE96058 and METABRIC.
 Both DerSimonian-Laird random-effects and fixed-effect are reported.
 """
 
@@ -18,6 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
 from src.meta import dersimonian_laird  # noqa: E402
+from src.ml import registry  # noqa: E402
 from src.survival import (  # noqa: E402
     bootstrap_c_index_ci,
     harrell_c_index,
@@ -28,8 +29,8 @@ from src.survival import (  # noqa: E402
 RESULTS = REPO_ROOT / "results"
 SEED = 42
 BOOTSTRAP_ITER = 1000
-HEADLINE = "Gradient_Boosted_Survival"
-PAM50 = "PAM50_ROR_official"
+HEADLINE = registry.headline_name()
+PAM50 = "PAM50_RORS_genefu"
 EXTERNAL_COHORTS = ["GSE96058", "METABRIC"]
 
 
@@ -176,7 +177,7 @@ def main() -> None:
     for _, row in table.iterrows():
         lines.append(
             f"  {row['cohort']}: n={row['n']}, events={row['events']}, "
-            f"GBSA C={row['headline_harrell_c']:.4f}, PAM50 C={row['pam50_harrell_c']:.4f}, "
+            f"ML C={row['headline_harrell_c']:.4f}, PAM50 C={row['pam50_harrell_c']:.4f}, "
             f"delta={row['delta_cindex']:+.4f} [{row['delta_ci_low']:.4f}, {row['delta_ci_high']:.4f}], "
             f"p={row['delta_p']:.4f}"
         )

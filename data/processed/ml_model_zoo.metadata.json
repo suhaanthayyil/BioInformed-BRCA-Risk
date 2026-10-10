@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-05-16T12:38:29-04:00",
+  "generated_at": "2026-10-03T17:59:37-04:00",
   "seed": 42,
   "n_splits": 5,
   "training_cohort": "TCGA-BRCA",
-  "n_training_samples": 213,
-  "n_events": 132,
+  "n_training_samples": 1064,
+  "n_events": 150,
   "features": [
     "Pathway_Immune",
     "Pathway_Proliferation",
@@ -12,13 +12,12 @@
     "Pathway_Metabolism",
     "Pathway_Stromal_EMT",
     "Pathway_Apoptosis_Stress",
-    "Pathway_Hormone",
-    "age_at_dx",
-    "stage_ordinal"
+    "Pathway_Hormone"
   ],
-  "grid_mode": "compact_local",
-  "note": "Compact grid used for local tractability; XGBoost Cox disabled by default after repeated native process termination. Set ENABLE_XGBOOST_SURVIVAL=1 to retry that optional cross-check.",
-  "headline_model": "Gradient_Boosted_Survival",
-  "headline_cv_cindex": 0.6418257777973452,
-  "headline_delta_vs_cox": 0.041963998078774156
+  "grid_mode": "expanded",
+  "selection": "top 5 configs per model from 5-fold CV re-scored with 5x5 repeated stratified CV; highest mean wins",
+  "note": "Expanded grid; XGBoost Cox disabled by default after repeated native process termination. Set ENABLE_XGBOOST_SURVIVAL=1 to retry that optional cross-check.",
+  "headline_model": "DeepSurv",
+  "headline_cv_cindex": 0.5929735748982865,
+  "headline_delta_vs_cox": -0.021040900669408003
 }

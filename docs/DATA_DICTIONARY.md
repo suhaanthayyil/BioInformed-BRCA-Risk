@@ -10,11 +10,12 @@ repository files. Columns are tagged by role:
 - **BASELINE** — comparator output (PAM50-ROR), not a model input
 - **AUX** — auxiliary / descriptive field (subtype, receptor status, treatment, etc.)
 
-The headline survival model (Gradient Boosted Survival) is trained on a
-fixed 9-column feature schema: the seven harmonized pathway features plus two
-clinical covariates (`age_at_dx`, `stage_ordinal`). Source: `scripts/train_ml_zoo.py`
-(`PATHWAY_FEATURES`, `feature_columns`) and `data/processed/ml_model_zoo.metadata.json`
-(`features`).
+The survival models are trained on the seven harmonized pathway features only,
+as registered. Source: `src/clinical.py` (`PRIMARY_FEATURES`) and
+`data/processed/ml_model_zoo.metadata.json` (`features`). `age_at_dx` and
+`stage_ordinal` enter only the sensitivity feature sets
+(`scripts/feature_ablation.py`) and the registered combined model (secondary
+endpoint c). GSE96058 does not release stage.
 
 ---
 
@@ -47,12 +48,12 @@ included for a cohort if at least 5 of its genes are present (`min_genes=5` in
 
 ---
 
-## 2. Clinical covariates (model inputs)
+## 2. Clinical covariates (sensitivity analyses and combined model)
 
 | Variable | Role | Definition / encoding |
 |---|---|---|
-| `age_at_dx` | INPUT | Age at diagnosis in years (continuous). Coerced to numeric in `scripts/train_ml_zoo.py`. Sourced from the harmonized `samples` table (`age_at_dx`, DOUBLE). |
-| `stage_ordinal` | INPUT | Ordinal AJCC/TNM stage derived from the harmonized `stage_tnm` string by `stage_to_ordinal()` in `scripts/train_ml_zoo.py`: contains "IV" -> 4.0; else "III" -> 3.0; else "II" -> 2.0; else "I" -> 1.0; otherwise NaN. Missing values are median-imputed inside the model pipeline (`SimpleImputer(strategy="median")`). |
+| `age_at_dx` | SENSITIVITY INPUT | Age at diagnosis in years (continuous). Coerced to numeric in `scripts/train_ml_zoo.py`. Sourced from the harmonized `samples` table (`age_at_dx`, DOUBLE). |
+| `stage_ordinal` | SENSITIVITY INPUT | AJCC anatomic stage I-IV from `src/clinical.py::stage_to_ordinal`: Roman-numeral stage strings (TCGA `pathologic_stage`, sub-stages A-C collapsed), numeric 1-4 (METABRIC `TUMOR_STAGE`; 0 = in situ treated as missing) and TNM codes such as `T2.0N1M0` (GSE20685, converted by `tnm_to_stage`). "Stage X", discrepant and unparseable values are missing. Not available for GSE96058. Used only in the stage sensitivity feature sets, which are fit and evaluated on patients with recorded stage. |
 
 ---
 
@@ -64,17 +65,15 @@ authoritative outcome variables used for all C-index/calibration/DCA analyses.
 
 | Variable | Role | Units / encoding |
 |---|---|---|
-| `os_days` | OUTCOME (time) | Overall-survival follow-up time in **days** (continuous; DOUBLE). Verified ranges by cohort: TCGA-BRCA ~159-7229, GSE96058 ~56-2474, METABRIC 0-10811, GSE20685 ~146-5150. Training excludes rows with `os_days <= 0` or missing (`scripts/train_ml_zoo.py`). |
+| `os_days` | OUTCOME (time) | Overall-survival follow-up time in **days** (continuous; DOUBLE). TCGA-BRCA uses TCGA-CDR `OS.time`. No minimum follow-up is applied; censored patients enter at their last follow-up. Rows with `os_days <= 0` are excluded from C-index calculations. |
 | `os_event` | OUTCOME (event) | Overall-survival event indicator: **0 = censored, 1 = death** (BIGINT). |
-| `dfs_days` | OUTCOME (time) | Disease-/recurrence-free survival time in **days** (DOUBLE). Populated only for METABRIC (n=2388) and a small subset of GSE20685 (n=25); NULL for TCGA-BRCA and GSE96058. Used by the METABRIC recurrence sensitivity analysis. |
+| `dfs_days` | OUTCOME (time) | Disease-/recurrence-free survival time in **days** (DOUBLE). METABRIC RFS, GSE20685 relapse time where recorded, TCGA-BRCA TCGA-CDR progression-free interval; NULL for GSE96058. Used by the METABRIC recurrence sensitivity analysis. |
 | `dfs_event` | OUTCOME (event) | Disease-/recurrence-free event indicator: **0 = censored, 1 = recurrence/relapse** (BIGINT). |
 | `last_followup_days` | AUX | Last-contact time in days (DOUBLE), where available. |
 
-Note on per-cohort raw clinical CSVs: the un-harmonized files
-`data/clinical/01_tcga_clinical.csv` and `01_gse96058_clinical.csv` carry their
-own `time_to_event` column expressed in **months** (e.g., TCGA 32.2, GSE96058
-78.9). Do **not** mix these with the harmonized `os_days` (days). Modeling uses
-the harmonized day-scale `survival.os_days` only.
+Note on the legacy clinical CSVs: `data/legacy_v1_preprint/01_tcga_clinical.csv` and
+`01_gse96058_clinical.csv` are the v1 (preprint) cohorts and are no longer read
+by the pipeline. Their `time_to_event` column is in months.
 
 ---
 
@@ -82,69 +81,60 @@ the harmonized day-scale `survival.os_days` only.
 
 Materialized in `data/processed/baselines_pam50.parquet` (long format, one row
 per `cohort` x `sample_id` x `baseline`). Two baselines are present:
-`PAM50_ROR_official` (genefu, `method_label = genefu_rorS`) and
+`PAM50_RORS_genefu` (genefu, `method_label = genefu_rorS`) and
 `PAM50_ROR_surrogate` (`published_subtype_plus_proliferation`). The
-**official** baseline is the head-to-head comparator in the manuscript.
+**genefu ROR-S** baseline is the head-to-head comparator in the manuscript.
 
 | Column | Role | Definition |
 |---|---|---|
 | `cohort` | ID | Cohort label (TCGA-BRCA, GSE96058, METABRIC, GSE20685). |
 | `sample_id` | ID | Harmonized sample identifier (join key). |
-| `baseline` | ID | `PAM50_ROR_official` or `PAM50_ROR_surrogate`. |
+| `baseline` | ID | `PAM50_RORS_genefu` or `PAM50_ROR_surrogate`. |
 | `score` | BASELINE | Raw ROR/risk score on the method's native scale. |
 | `score_0_100` | BASELINE | ROR score rescaled to **0-100** (verified min 0.0, max 100.0). This is the discrimination comparator score. |
-| `method_label` | AUX | `genefu_rorS` (official) or `published_subtype_plus_proliferation` (surrogate). |
+| `method_label` | AUX | `genefu_rorS` (genefu research ROR-S) or `published_subtype_plus_proliferation` (surrogate). |
 | `status` | AUX | `ok` (score computed) or `unavailable` (insufficient inputs). |
 | `note` | AUX | Free-text provenance / unavailability reason. |
 | `pam50_subtype_genefu` | BASELINE/AUX | genefu-called intrinsic subtype: one of {Basal, Her2, LumA, LumB, Normal}. |
 | `rorS_risk` | BASELINE/AUX | genefu ROR-S risk group: {Low, Intermediate, High}. |
 | `n_pam50_genes_input` | AUX | Number of PAM50 genes available to the scorer for that sample. |
 | `er_status` | AUX | ER status used for risk-group cutpoints. |
-| `tnbc_flag` | AUX | Triple-negative indicator (used to define the pre-registered TNBC subgroup). |
+| `tnbc_flag` | AUX | Triple-negative indicator (used to define the registered TNBC subgroup). |
 | `intrinsic_subtype_pam50_published` | AUX | Published/source-provided intrinsic subtype, for cross-check. |
 
 ---
 
 ## 5. Per-file column tables
 
-### 5a. `data/clinical/01_tcga_clinical.csv` (TCGA-BRCA, raw)
-
-This file is the published TCGA-BRCA clinical export (UCSC Xena / nature2012
-fields) plus six appended harmonized columns. Only the appended/relevant
-columns are tabulated; the file additionally contains ~190 upstream TCGA
-clinical/`_GENOMIC_ID_*` fields that are not used by the modeling pipeline.
+### 5a. `data/clinical/tcga_brca_clinical.csv` (TCGA-BRCA, written by `scripts/ingest_raw.py`)
 
 | Column | Role | Notes |
 |---|---|---|
-| `sampleID` / `sample_id` | ID | TCGA sample barcode / harmonized id. |
-| `time_to_event` | OUTCOME (time) | **Months** (raw cohort scale; not the harmonized day-scale used for modeling). |
-| `event_status` | OUTCOME (event) | 0 = censored, 1 = death (counts: 0->81, 1->132). |
-| `high_risk` | AUX/label | Binary high-risk label present in the raw file (0->139, 1->74). Derived upstream; the modeling pipeline does not consume it as a feature. |
-| `stage` | AUX | Source stage string (e.g., "Stage IIA"); harmonized to `stage_ordinal` for modeling. |
-| `pam50_subtype` / `PAM50Call_RNAseq` / `PAM50_mRNA_nature2012` | AUX | Published PAM50 subtype calls (LumA, LumB, Basal, Her2, Normal). |
-| `OS_Time_nature2012`, `OS_event_nature2012`, `Vital_Status_nature2012` | AUX | Upstream survival fields (superseded by the harmonized `survival` table). |
-| `ER_Status_nature2012`, `PR_Status_nature2012`, `HER2_Final_Status_nature2012` | AUX | Receptor status. |
-| `Age_at_Initial_Pathologic_Diagnosis_nature2012` / `age_at_initial_pathologic_diagnosis` | AUX | Source age (harmonized to `age_at_dx`). |
+| `sample_id`, `patient_id` | ID | TCGA primary-tumour barcode (-01) and patient barcode. |
+| `age_at_dx` | AUX | `age_at_initial_pathologic_diagnosis`. |
+| `stage_tnm` | AUX | `pathologic_stage`; mapped to `stage_ordinal`. |
+| `er_status`, `pr_status`, `her2_status` | AUX | IHC receptor status; HER2 combines IHC and ISH. |
+| `pam50_published` | AUX | `PAM50Call_RNAseq`. |
+| `os_days`, `os_event` | OUTCOME | TCGA-CDR `OS.time` (days) and `OS`. |
+| `pfi_days`, `pfi_event` | OUTCOME | TCGA-CDR progression-free interval. |
 
-### 5b. `data/clinical/01_gse96058_clinical.csv` (GSE96058 / SCAN-B, raw)
+### 5b. `data/clinical/gse96058_clinical.csv` (GSE96058 / SCAN-B, written by `scripts/ingest_raw.py`)
 
 | Column | Role | Notes |
 |---|---|---|
-| `sample_id` | ID | GEO sample id. |
-| `scan-b_external_id` | ID | SCAN-B external id. |
-| `age_at_diagnosis` | AUX | Source age (harmonized to `age_at_dx`). |
-| `overall_survival_days` | OUTCOME (time) | OS time in **days** in this raw file (e.g., 2367, 2168). |
-| `overall_survival_event` | OUTCOME (event) | 0 = censored, 1 = death (0->1161, 1->322). |
-| `time_to_event` | OUTCOME (time) | **Months** (raw cohort scale; not used for modeling). |
-| `event_status` | OUTCOME (event) | 0 = censored, 1 = death (matches `overall_survival_event`). |
-| `high_risk` | AUX/label | Binary high-risk label (0->1188, 1->295). Not a model feature. |
-| `pam50_subtype` | AUX | Published PAM50 subtype. |
+| `sample_id`, `geo_accession` | ID | GEO sample title (F-number) and GSM accession. |
+| `age_at_diagnosis` | AUX | Harmonized to `age_at_dx`. |
+| `overall_survival_days`, `overall_survival_event` | OUTCOME | Parsed as `os_days`, `os_event`. |
 | `er_status`, `pgr_status`, `her2_status`, `ki67_status`, `nhg` | AUX | Clinicopathology / receptor status. |
+| `pam50_subtype` | AUX | Published PAM50 subtype. |
 | `*_prediction_mgc`, `*_prediction_sgc` | AUX | SCAN-B multi-/single-gene classifier predictions. |
 | `tumor_size`, `lymph_node_group`, `lymph_node_status` | AUX | Tumor burden / nodal status. |
 | `endocrine_treated`, `chemo_treated` | AUX | Treatment flags. |
 
-### 5c. `data/processed/04_pathway_features.parquet` (all cohorts; shape 5929 x 9)
+`data/clinical/legacy_v1_cohort_ids.csv` lists the sample IDs of the legacy
+TCGA (213) and GSE96058 (1,483) sets; `qc.in_legacy_v1_cohort` flags them.
+
+### 5c. `data/processed/04_pathway_features.parquet` (all cohorts; one row per scored sample)
 
 | Column | Role | Notes |
 |---|---|---|
@@ -163,8 +153,7 @@ table at modeling time, not stored in this parquet.)
 
 ### 5d. `data/processed/baselines_pam50.parquet` (all cohorts; shape 9064 x 14)
 
-See Section 4 for the full column table. 4,532 rows per baseline
-(`PAM50_ROR_official` and `PAM50_ROR_surrogate`).
+See Section 4 for the full column table.
 
 ---
 
@@ -174,7 +163,7 @@ The modeling frame in `scripts/train_ml_zoo.py` is built by joining
 `04_pathway_features.parquet` to these two tables on `sample_id` / `cohort`.
 
 **`samples`** (per sample): `sample_id` (ID), `cohort` (ID), `patient_id` (ID),
-`age_at_dx` (INPUT), `sex`, `race`, `ethnicity`, `stage_tnm` (source of
+`age_at_dx` (SENSITIVITY INPUT), `sex`, `race`, `ethnicity`, `stage_tnm` (source of
 `stage_ordinal`), `grade`, `er_status`, `pr_status`, `her2_status`,
 `intrinsic_subtype_pam50_published`, `tnbc_flag` (BOOLEAN; defines TNBC
 subgroup), `primary_site`, `treatment_summary` (all AUX unless noted).
@@ -189,12 +178,12 @@ subgroup), `primary_site`, `treatment_summary` (all AUX unless noted).
 
 | Cohort | Samples with pathway features | Role |
 |---|---|---|
-| TCGA-BRCA | 213 | Training cohort (internal 5-fold CV; headline model fit here) |
-| GSE96058 / SCAN-B | 3409 | External validation |
-| METABRIC | 1980 | External validation (also DFS/recurrence endpoint) |
+| TCGA-BRCA | 1,064 | Training cohort (internal 5-fold CV; out-of-fold predictions used in pooled analyses) |
+| GSE96058 / SCAN-B | 3,273 | External validation |
+| METABRIC | 1,980 | External validation (also DFS/recurrence endpoint) |
 | GSE20685 | 327 | External validation (OS only; no receptor status, cannot enter TNBC endpoint) |
 
-Sample counts entering the official PAM50-ROR head-to-head and patient-
+Sample counts entering the genefu PAM50 ROR-S head-to-head and patient-
 characteristics analyses differ from these scoring counts because of metric-
 evaluability filters (non-positive survival time, model-specific missingness);
 see `results/Table_1_denominator_crosswalk.csv`.

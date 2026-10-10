@@ -1,26 +1,5 @@
 #!/usr/bin/env python3
-"""Training-size sensitivity / learning curve (reviewers R1.2 / R2.2 / R3.2).
-
-Reviewers asked how the small TCGA-BRCA training cohort (n = 213) affects model
-stability and external generalisation, and why TCGA was the sole training set.
-This script:
-
-1. Retrains the locked headline configuration (Gradient Boosted Survival,
-   n_estimators=100, learning_rate=0.03, max_depth=1, subsample=1.0) on growing
-   random fractions of TCGA-BRCA (20-100%), reporting internal 5-fold CV C-index
-   and pooled external C-index as a function of training size, with bootstrap
-   bands over repeated subsamples.
-2. Runs a train-on-METABRIC (the largest cohort) cross-check, validating on the
-   remaining cohorts, so the TCGA-as-training choice is justified empirically
-   rather than only argued.
-
-Outputs:
-  results/Table_S17_learning_curve.csv
-  results/Table_S17_train_cohort_crosscheck.csv
-  figures/fig_learning_curve.png / .pdf
-
-Exploratory, secondary analysis.
-"""
+"""Training-size learning curve and train-cohort cross-check (Table S17)."""
 
 from __future__ import annotations
 
@@ -34,14 +13,13 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
-from sksurv.ensemble import GradientBoostingSurvivalAnalysis  # noqa: E402
 from sksurv.metrics import concordance_index_censored  # noqa: E402
-from sksurv.util import Surv  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.train_ml_zoo import load_modeling_frame, make_preprocessor  # noqa: E402
+from src.ml import registry  # noqa: E402
 
 RESULTS = REPO_ROOT / "results"
 FIGURES = REPO_ROOT / "figures"
@@ -50,7 +28,6 @@ SEED = 42
 N_REPEATS = 25
 N_SPLITS = 5
 FRACTIONS = [0.2, 0.4, 0.6, 0.8, 1.0]
-GBSA_CONFIG = {"n_estimators": 100, "learning_rate": 0.03, "max_depth": 1, "subsample": 1.0}
 EXTERNAL_COHORTS = ["GSE96058", "METABRIC", "GSE20685"]
 
 
@@ -61,11 +38,19 @@ def valid_rows(frame: pd.DataFrame) -> pd.DataFrame:
     return f
 
 
-def fit_gbsa(x: pd.DataFrame, time: np.ndarray, event: np.ndarray):
+HEADLINE = registry.headline_name()
+CONFIG = registry.selected_config(HEADLINE)
+
+
+def fit_headline(x: pd.DataFrame, time: np.ndarray, event: np.ndarray):
     pre = make_preprocessor().fit(x)
-    model = GradientBoostingSurvivalAnalysis(random_state=SEED, **GBSA_CONFIG)
-    model.fit(pre.transform(x), Surv.from_arrays(event.astype(bool), time.astype(float)))
+    model = registry.make_estimator(HEADLINE, CONFIG)
+    model.fit(pre.transform(x), time.astype(float), event.astype(bool))
     return pre, model
+
+
+def _predict(model, x) -> np.ndarray:
+    return np.ravel(np.asarray(model.predict(x), dtype=float))
 
 
 def cindex(time: np.ndarray, event: np.ndarray, risk: np.ndarray) -> float:
@@ -82,15 +67,15 @@ def internal_cv_c(x: pd.DataFrame, time: np.ndarray, event: np.ndarray, rng: np.
     skf = StratifiedKFold(n_splits=N_SPLITS, shuffle=True, random_state=seed)
     oof = np.full(len(x), np.nan)
     for tr, te in skf.split(x, event):
-        pre, model = fit_gbsa(x.iloc[tr], time[tr], event[tr])
-        oof[te] = model.predict(pre.transform(x.iloc[te]))
+        pre, model = fit_headline(x.iloc[tr], time[tr], event[tr])
+        oof[te] = _predict(model, pre.transform(x.iloc[te]))
     return cindex(time, event, oof)
 
 
 def external_pooled_c(pre, model, externals: dict[str, pd.DataFrame], features: list[str]) -> float:
     cs, weights = [], []
     for _cohort, df in externals.items():
-        risk = model.predict(pre.transform(df[features]))
+        risk = _predict(model, pre.transform(df[features]))
         c = cindex(df["os_days"].to_numpy(), df["os_event"].to_numpy(), risk)
         if np.isfinite(c):
             cs.append(c)
@@ -123,7 +108,7 @@ def main() -> None:
             if int(e.sum()) < N_SPLITS:
                 continue
             internal_scores.append(internal_cv_c(x.reset_index(drop=True), t, e, rng))
-            pre, model = fit_gbsa(x, t, e)
+            pre, model = fit_headline(x, t, e)
             external_scores.append(external_pooled_c(pre, model, externals, features))
         internal_scores = [s for s in internal_scores if np.isfinite(s)]
         external_scores = [s for s in external_scores if np.isfinite(s)]
@@ -155,11 +140,11 @@ def main() -> None:
         tr = frame[frame["cohort"].eq(train_cohort)]
         if int(tr["os_event"].sum()) < N_SPLITS:
             continue
-        pre, model = fit_gbsa(tr[features], tr["os_days"].to_numpy(), tr["os_event"].to_numpy())
+        pre, model = fit_headline(tr[features], tr["os_days"].to_numpy(), tr["os_event"].to_numpy())
         val = {c: frame[frame["cohort"].eq(c)] for c in all_cohorts if c != train_cohort}
         per = {}
         for c, df in val.items():
-            risk = model.predict(pre.transform(df[features]))
+            risk = _predict(model, pre.transform(df[features]))
             per[c] = cindex(df["os_days"].to_numpy(), df["os_event"].to_numpy(), risk)
         pooled = external_pooled_c(pre, model, val, features)
         cross_rows.append(
@@ -187,7 +172,7 @@ def main() -> None:
     ax.axhline(0.5, color="gray", ls=":", lw=1, label="Chance")
     ax.set_xlabel("TCGA-BRCA training samples (n)")
     ax.set_ylabel("Harrell C-index")
-    ax.set_title("Learning curve: headline GBSA vs training size")
+    ax.set_title(f"Learning curve: {HEADLINE} vs training size")
     ax.set_ylim(0.45, 0.75)
     ax.legend(loc="lower right", fontsize=8)
     fig.tight_layout()

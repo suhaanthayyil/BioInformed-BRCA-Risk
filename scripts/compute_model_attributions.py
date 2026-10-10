@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-import pickle
+import joblib
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -19,7 +19,8 @@ from sksurv.metrics import concordance_index_censored
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.train_ml_zoo import feature_columns, stage_to_ordinal  # noqa: E402
+from scripts.train_ml_zoo import feature_columns  # noqa: E402
+from src.clinical import stage_to_ordinal  # noqa: E402
 from src.ml.deepsurv import CoxMLP  # noqa: E402
 from src.ml.wrappers import SkSurvAdapter  # noqa: E402,F401  (imported so pickled artifacts resolve)
 
@@ -62,8 +63,7 @@ def cindex(time, event, risk):
 
 
 def load_pickle(path: Path):
-    with path.open("rb") as fh:
-        return pickle.load(fh)
+    return joblib.load(path)
 
 
 def rsf_permutation_importance(train: pd.DataFrame, cols: list[str]) -> pd.DataFrame:

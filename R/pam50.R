@@ -2,7 +2,7 @@
 
 suppressPackageStartupMessages({
   if (!requireNamespace("genefu", quietly = TRUE)) {
-    stop("genefu is not installed; cannot compute official PAM50/ROR scores")
+    stop("genefu is not installed; cannot compute genefu PAM50/ROR scores")
   }
   library(genefu)
 })
@@ -28,7 +28,7 @@ if ("probe" %in% colnames(annot)) {
 
 common <- intersect(colnames(expr), rownames(annot))
 if (length(common) < 40) {
-  stop(sprintf("Only %d PAM50 genes available; refusing official PAM50 scoring", length(common)))
+  stop(sprintf("Only %d PAM50 genes available; refusing genefu PAM50 scoring", length(common)))
 }
 expr <- expr[, common, drop = FALSE]
 annot <- annot[common, , drop = FALSE]

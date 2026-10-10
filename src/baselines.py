@@ -211,7 +211,7 @@ def pam50_ror_surrogate(
 ) -> ScoreResult:
     """Compute a PAM50-ROR-like risk surrogate from public cohort fields.
 
-    Official PAM50 ROR calculation requires platform-specific centroid mapping
+    Clinical PAM50 ROR (Prosigna) calculation requires platform-specific centroid mapping
     and formulae generally supplied by packages such as ``genefu``. Until that
     path is available, this function uses published intrinsic subtype labels
     plus proliferation/tumor-size modifiers and labels the output as a surrogate.
@@ -238,9 +238,9 @@ def pam50_ror_surrogate(
     scaled = percentile_0_100(risk)
     status = "ok" if scaled.notna().sum() else "unavailable"
     note = (
-        "PAM50-ROR surrogate, not official ROR-S/ROR-P/ROR-PT; "
+        "PAM50-ROR surrogate, not genefu ROR-S/ROR-P/ROR-PT; "
         + ", ".join(pieces)
-        + ". Official genefu PAM50-ROR is the primary comparator; this surrogate "
+        + ". genefu PAM50 ROR-S (research implementation) is the primary comparator; this surrogate "
         + "is retained only for historical comparison."
     )
     return ScoreResult(scaled, "PAM50_ROR_surrogate", "published_subtype_plus_proliferation", status, note)
