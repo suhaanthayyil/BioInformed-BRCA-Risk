@@ -7,7 +7,7 @@ Registration: `docs/PRIMARY_ENDPOINT.md`, commit `7783f4f` (2026-05-16). Machine
 - Registered: At least three independent cohorts (not named)
 - Submitted manuscript: Submitted: TCGA-BRCA (training), GSE96058, METABRIC, GSE20685
 - Revised analysis: Revised: same four cohorts
-- Reason: METABRIC and GSE20685 were obtained after registration. TCGA-BRCA and GSE96058 had already been analysed in the April 2026 preprint, so only METABRIC and GSE20685 are validation cohorts that were unseen at registration.. The registration did not name the training cohort or the PAM50 implementation; TCGA-BRCA as sole training cohort and genefu::rorS were fixed after registration
+- Reason: METABRIC and GSE20685 were obtained after registration. TCGA-BRCA and GSE96058 had already been analysed in the April 2026 preprint, so only METABRIC and GSE20685 are validation cohorts that were unseen at registration. The registration did not name the training cohort or the PAM50 implementation; TCGA-BRCA as sole training cohort and genefu::rorS were fixed after registration
 
 ## Cohort inclusion
 

@@ -18,7 +18,7 @@ PYTHON ?= python3
 
 .DEFAULT_GOAL := help
 
-.PHONY: help reproduce-headline smoke test lint consistency phase3 figures \
+.PHONY: help reproduce-headline smoke test lint consistency publication phase3 figures \
         all all-from-raw migrate-pickles fetch
 
 help: ## Show this help
@@ -29,6 +29,7 @@ help: ## Show this help
 	@echo "  test                Full pytest suite (PAM50-ROR test needs R/genefu)"
 	@echo "  lint                ruff check + mypy (mypy non-blocking)"
 	@echo "  consistency         Recompute-vs-committed submission consistency gate"
+	@echo "  publication         Audit release version, cohorts, endpoints, deviations, and stage handling"
 	@echo "  phase3              Run the four Phase-3 exploratory analyses"
 	@echo "  figures             Build manuscript figures/tables"
 	@echo "  all                 From committed intermediates: train -> external -> phase3 -> figures -> consistency"
@@ -53,6 +54,9 @@ lint: ## Lint with ruff; type-check with mypy (mypy is non-blocking)
 
 consistency: ## Recompute-vs-committed submission consistency gate (exit 0 = all pass)
 	$(PYTHON) scripts/check_submission_consistency.py
+
+publication: ## Publication-readiness audit against committed evidence (exit 0 = all pass)
+	$(PYTHON) scripts/check_publication_readiness.py
 
 phase3: ## Registered endpoints, sensitivity and exploratory analyses
 	$(PYTHON) scripts/registered_endpoints.py

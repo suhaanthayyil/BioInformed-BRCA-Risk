@@ -153,17 +153,20 @@ def run_analysis() -> tuple[pd.DataFrame, pd.DataFrame]:
 
 def plot_forest(table: pd.DataFrame, meta_table: pd.DataFrame) -> None:
     plot_rows = table[table["status"].eq("ok")].copy()
-    fig, ax = plt.subplots(figsize=(7.2, max(4, 0.32 * (len(plot_rows) + len(meta_table) + 2))))
+    fig, ax = plt.subplots(figsize=(8.4, max(4, 0.32 * (len(plot_rows) + len(meta_table) + 2))))
     y = 0
     yticks = []
     labels = []
+    subtype_tick_indexes = []
+    interval_lows = []
+    interval_highs = []
     for subtype in SUBTYPES:
         sub = plot_rows[plot_rows["subtype"].eq(subtype)]
         if sub.empty:
             continue
-        ax.text(-0.32, y, subtype, fontsize=9, fontweight="bold", va="center")
         yticks.append(y)
         labels.append(subtype)
+        subtype_tick_indexes.append(len(labels) - 1)
         y += 1
         for _, row in sub.iterrows():
             ax.errorbar(
@@ -174,8 +177,11 @@ def plot_forest(table: pd.DataFrame, meta_table: pd.DataFrame) -> None:
                 color="#31688e",
                 capsize=2,
             )
+            interval_lows.append(float(row["delta_ci_low"]))
+            interval_highs.append(float(row["delta_ci_high"]))
             events = int(row["events"]) if "events" in row and pd.notna(row["events"]) else 0
-            ax.text(-0.30, y, f"{row['cohort']} (n={int(row['n'])}, e={events})", fontsize=8, va="center")
+            yticks.append(y)
+            labels.append(f"{row['cohort']} (n={int(row['n'])}, e={events})")
             y += 1
         meta = meta_table[meta_table["subtype"].eq(subtype)]
         if not meta.empty:
@@ -188,14 +194,25 @@ def plot_forest(table: pd.DataFrame, meta_table: pd.DataFrame) -> None:
                 color="#440154",
                 capsize=3,
             )
-            ax.text(-0.30, y, f"Meta p={row['meta_p']:.3f}", fontsize=8, va="center")
+            interval_lows.append(float(row["meta_ci_low"]))
+            interval_highs.append(float(row["meta_ci_high"]))
+            yticks.append(y)
+            labels.append(f"Meta p={row['meta_p']:.3f}")
             y += 1
         y += 0.5
     ax.axvline(0, color="black", lw=1)
-    ax.set_xlabel("Delta C-index: ML minus PAM50-ROR")
-    ax.set_yticks([])
+    ax.set_xlabel("Delta C-index: pathway ML minus PAM50 ROR-S")
+    ax.set_yticks(yticks)
+    ax.set_yticklabels(labels, fontsize=8)
+    ax.tick_params(axis="y", length=0, pad=7)
+    for index in subtype_tick_indexes:
+        ax.get_yticklabels()[index].set_fontweight("bold")
+    ax.invert_yaxis()
     ax.set_title("Exploratory within-subtype external validation")
-    ax.set_xlim(-0.35, 0.35)
+    lower = min(interval_lows, default=-0.05)
+    upper = max(interval_highs, default=0.05)
+    padding = max(0.02, 0.06 * (upper - lower))
+    ax.set_xlim(lower - padding, upper + padding)
     ax.grid(axis="x", alpha=0.2)
     fig.tight_layout()
     FIGURES.mkdir(exist_ok=True)

@@ -12,6 +12,8 @@ Survival models trained on seven MSigDB pathway scores in TCGA-BRCA and applied 
 
 The primary endpoint was registered on 2026-05-16 (`docs/PRIMARY_ENDPOINT.md`). TCGA-BRCA and GSE96058 had already been analysed in the April 2026 preprint; METABRIC and GSE20685 were new at registration. Every deviation from the registered plan is listed in `docs/REGISTRATION_DEVIATIONS.md` (Table S20).
 
+**Analyses first performed after registration** were acquisition and use of METABRIC and GSE20685, the current MSigDB pathway definitions, the time-to-event survival model zoo, genefu PAM50 ROR-S scoring, the registered TNBC meta-analysis, and the other survival analyses reported in the BMC manuscript. The pre-registration work was the earlier TCGA-BRCA-to-GSE96058 binary 5-year analysis with different pathway definitions; it was not the current survival-analysis pipeline. The full chronology is documented in `docs/PRIMARY_ENDPOINT.md` and Supplementary Table S20.
+
 ## Revision (October 2026)
 
 The analysis was re-run after the journal's pre-publication checks:
@@ -25,6 +27,7 @@ The analysis was re-run after the journal's pre-publication checks:
 
 ## Key Results
 
+- **Analysis population:** 6,644 patients were analysed; 6,643 were evaluable in the head-to-head comparison with PAM50 ROR-S (TCGA-BRCA 1,064; GSE96058 3,273; METABRIC 1,980 analysed/1,979 evaluable; GSE20685 327).
 - **Headline model:** DeepSurv, chosen from RSF, GBSA and DeepSurv on TCGA only (expanded grid, top 5 per model re-scored with 5x5 repeated CV; C-index 0.593; Cox PH 0.614).
 - **TNBC primary endpoint:** NOT MET. Delta C vs PAM50 ROR-S = +0.020 (95% CI -0.040 to +0.081), p = 0.51; external cohorts only +0.013 (p = 0.68). Comparable to PAM50 ROR-S in TNBC, not superior.
 - **Overall discrimination:** lower than PAM50 ROR-S in GSE96058 (-0.077) and METABRIC (-0.043); registered non-inferiority (margin -0.02) not met.
@@ -80,11 +83,15 @@ weight and score), `migrate_pickles.py` (make pickles load cold),
 `build_manuscript_docx.py`. `run_rescue_analysis.py` / `screen_rescue_top_candidates.py`
 are exploratory rescue analyses (over-fit; not a result claim).
 
-## Manuscript
+## Publication package
 
-The manuscript and supplementary materials are maintained separately from this
-code repository and are not included here. This repository is the code, data,
-and reproducibility artifacts that back the submitted results.
+Version **v1.2.1** is the publication-facing revision. The
+[GitHub Release](https://github.com/suhaanthayyil/BioInformed-BRCA-Risk/releases/tag/v1.2.1)
+includes the revised manuscript and Supplementary Information in DOCX and PDF
+formats, release notes, and SHA256 checksums. Supplementary Tables S18-S21 are
+embedded in the Supplementary Information and their machine-readable sources
+remain in `results/`. The evidence map in `docs/PUBLICATION_PACKAGE.md` links
+each pre-publication concern to its source data, code, and verification command.
 
 ## Data Sources
 

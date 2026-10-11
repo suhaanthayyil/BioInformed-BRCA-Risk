@@ -11,7 +11,7 @@ authors:
     orcid: "https://orcid.org/0009-0001-9881-6643"
 year: 2026
 license: MIT
-version: "1.2.0"
-date-released: "2026-10-03"
+version: "1.2.1"
+date-released: "2026-10-11"
 repository-code: "https://github.com/suhaanthayyil/BioInformed-BRCA-Risk"
 # doi: left blank pending an archival deposit (Zenodo not used for this revision)

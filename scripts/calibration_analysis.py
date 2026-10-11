@@ -42,6 +42,11 @@ from scripts.phase3_common import (  # noqa: E402
 
 MODELS = [HEADLINE_MODEL, COX_MODEL, PAM50_MODEL]
 HORIZONS = {5: 5 * 365, 10: 10 * 365}
+DISPLAY_LABELS = {
+    HEADLINE_MODEL: "Pathway ML",
+    COX_MODEL: "Cox baseline",
+    PAM50_MODEL: "PAM50 ROR-S",
+}
 
 
 def logit(values: np.ndarray) -> np.ndarray:
@@ -178,7 +183,15 @@ def plot_calibration(curves: dict[tuple[str, int, str], pd.DataFrame]) -> None:
             for model in MODELS:
                 pts = curves.get((cohort, years, model), pd.DataFrame())
                 if not pts.empty:
-                    ax.plot(pts["pred"], pts["obs"], marker="o", ms=3, lw=1, label=model, color=colors[model])
+                    ax.plot(
+                        pts["pred"],
+                        pts["obs"],
+                        marker="o",
+                        ms=3,
+                        lw=1,
+                        label=DISPLAY_LABELS[model],
+                        color=colors[model],
+                    )
             ax.set_title(f"{cohort}, {years}y", fontsize=9)
             ax.grid(alpha=0.2)
             if row == 1:

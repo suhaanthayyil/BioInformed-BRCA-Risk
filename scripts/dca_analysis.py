@@ -42,6 +42,7 @@ MODEL_LABELS = {
     COX_MODEL: "Cox baseline",
     PAM50_MODEL: "PAM50-ROR",
 }
+PLOT_LABELS = {"PAM50-ROR": "PAM50 ROR-S"}
 THRESHOLDS = np.round(np.arange(0.05, 0.5001, 0.025), 3)
 HORIZON_DAYS = 5 * 365
 
@@ -164,7 +165,7 @@ def plot_dca(dca: pd.DataFrame) -> None:
             ax.plot(
                 group["threshold"],
                 group["net_benefit"],
-                label=strategy,
+                label=PLOT_LABELS.get(strategy, strategy),
                 color=colors.get(strategy, "#333333"),
                 ls=linestyles.get(strategy, "-"),
                 lw=1.4,
