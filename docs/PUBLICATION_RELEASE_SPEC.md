@@ -10,7 +10,7 @@ The default-branch README must:
 - state that METABRIC and GSE20685 were unseen at registration;
 - identify the analyses first performed after registration;
 - use the revised cohort sizes, DeepSurv headline model, and primary result;
-- link to the publication release and its manuscript and Supplementary Information assets.
+- link to the code and reproducibility release.
 
 The repository must provide machine-checkable evidence for:
 
@@ -20,4 +20,4 @@ The repository must provide machine-checkable evidence for:
 - corrected stage parsing and the absence of stage in GSE96058;
 - consistency among `VERSION`, `CITATION.cff`, README, and the Git tag.
 
-The GitHub Release must attach the revised manuscript and Supplementary Information in both DOCX and PDF form, plus SHA256 checksums and release notes. The response letter remains a journal correspondence file and is not a public release asset.
+The GitHub Release must expose the tagged source code and machine-readable results without attaching manuscript, Supplementary Information, or journal-correspondence files. Those documents remain in the private journal-submission package. GitHub's automatically generated source archives are the public release assets.

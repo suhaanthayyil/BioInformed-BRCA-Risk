@@ -1,5 +1,11 @@
 # Publication Release Implementation Plan
 
+> Packaging update (11 October 2026): the manuscript, Supplementary Information,
+> and journal correspondence were removed from the public GitHub Release to avoid
+> version-of-record and copyright ambiguity. The release now distributes tagged
+> source code and machine-readable results only. Asset-publication steps below
+> are retained as the historical execution plan.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Publish a verifiable `v1.2.1` repository release whose default branch, code, results, manuscript, and Supplementary Information all represent the revised 6,644-patient analysis.

@@ -41,7 +41,7 @@ def test_repository_audit_proves_publication_claims() -> None:
 
 @pytest.mark.skipif(
     not all(path.exists() for path in (MANUSCRIPT, SUPPLEMENT, RESPONSE)),
-    reason="submission DOCX files are release assets and are not tracked in the code repository",
+    reason="private journal-submission DOCX files are not tracked in the code repository",
 )
 def test_document_audit_proves_submission_package_is_publication_ready() -> None:
     result = run_audit(

@@ -85,13 +85,16 @@ are exploratory rescue analyses (over-fit; not a result claim).
 
 ## Publication package
 
-Version **v1.2.1** is the publication-facing revision. The
+Version **v1.2.1** is the reproducibility release corresponding to the
+publication-facing revision. The
 [GitHub Release](https://github.com/suhaanthayyil/BioInformed-BRCA-Risk/releases/tag/v1.2.1)
-includes the revised manuscript and Supplementary Information in DOCX and PDF
-formats, release notes, and SHA256 checksums. Supplementary Tables S18-S21 are
-embedded in the Supplementary Information and their machine-readable sources
-remain in `results/`. The evidence map in `docs/PUBLICATION_PACKAGE.md` links
-each pre-publication concern to its source data, code, and verification command.
+pins the source code and machine-readable results used for the revision.
+Manuscript, Supplementary Information, and journal correspondence files are
+not distributed through GitHub; the journal submission system is the
+authoritative channel for those documents. The machine-readable sources for
+Supplementary Tables S18-S21 remain in `results/`. The evidence map in
+`docs/PUBLICATION_PACKAGE.md` links each pre-publication concern to its source
+data, code, and verification command.
 
 ## Data Sources
 

@@ -1,6 +1,6 @@
 # Publication Package Evidence Map
 
-Release `v1.2.1` is the publication-facing package for the revised 6,644-patient analysis. The GitHub Release contains the manuscript and Supplementary Information in DOCX and PDF form plus `SHA256SUMS.txt`.
+Release `v1.2.1` is the code and reproducibility package for the revised 6,644-patient analysis. Manuscript, Supplementary Information, and journal correspondence files are kept in the private journal-submission package and are not distributed through GitHub.
 
 ## Registration timing
 
@@ -15,7 +15,7 @@ Evidence:
 
 ## Registered and reported analyses
 
-Supplementary Table S18 contains all eight registered endpoints. This includes both Oncotype DX surrogate dispositions: the overall ER-positive comparison and the TNBC comparison reported as not evaluable. Supplementary Table S20 contains all 16 registered-versus-reported changes and their reasons. Tables S18-S21 are embedded in the release Supplementary Information; their machine-readable sources are:
+Supplementary Table S18 contains all eight registered endpoints. This includes both Oncotype DX surrogate dispositions: the overall ER-positive comparison and the TNBC comparison reported as not evaluable. Supplementary Table S20 contains all 16 registered-versus-reported changes and their reasons. Tables S18-S21 are embedded in the journal-submission Supplementary Information; their public machine-readable sources are:
 
 - `results/Table_S18_registered_endpoints.csv`
 - `results/Table_S19_locked_model_full_cohorts.csv`
@@ -40,11 +40,11 @@ Run the repository-only publication gate:
 python scripts/check_publication_readiness.py
 ```
 
-Include the release Supplementary Information in the gate:
+When working from the private submission workspace, include the Supplementary Information in the gate:
 
 ```bash
 python scripts/check_publication_readiness.py \
-  --supplement _submission/BMC_Supplement_prepublication_revision_v1.2.docx
+  --supplement _submission/BMC_Supplement_prepublication_revision_v1.2.1.docx
 ```
 
 The broader reproducibility gates are:
